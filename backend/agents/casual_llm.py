@@ -19,6 +19,27 @@ def generate_bot_reply(conversation_history: list) -> str:
     )
     return response.choices[0].message.content.strip()
 
+def generate_bot_reply_stream(conversation_history: list):
+    """
+    Streams the assistant reply token by token.
+    Yields each chunk as it arrives from Azure OpenAI.
+    """
+    messages = [
+        {"role": "system", "content": "You are a helpful conversational AI assistant."}
+    ] + conversation_history
+
+    response = client.chat.completions.create(
+        model=azure_deployment,
+        messages=messages,
+        stream=True  # ← this is what enables streaming
+    )
+
+    for chunk in response:
+        if chunk.choices:
+            delta = chunk.choices[0].delta
+            if delta and delta.content:
+                yield delta.content  # ← sends one small piece at a time
+
 
 def generate_title(user_message: str) -> str:
     """

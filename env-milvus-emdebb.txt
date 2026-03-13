@@ -1,0 +1,2 @@
+API = Bmcwdem64i4nQcptqCawuSDqmAP76ZRFkTs2cq2U2hEUBXa9NGkpJQQJ99CCACYeBjFXJ3w3AAAAACOGQHXI
+URL = https://dtc-copilot-novoconsulting.cognitiveservices.azure.com/openai/deployments/text-embedding-ada-002/embeddings?api-version=2023-05-15

@@ -1,13 +1,59 @@
-from fastapi import APIRouter, HTTPException
-from backend.agents.casual_llm import generate_bot_reply, generate_title
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from backend.utils.utilities import db, now_iso, to_ist
 from dateutil import parser as dtparser
 from backend.schemas.conversation_schema import CreateConversationRequest, SendMessageRequest 
 from datetime import datetime, timezone
-from dateutil import parser as dtparser
+from backend.agents.casual_llm import generate_bot_reply, generate_bot_reply_stream, generate_title
 import uuid
+import re                                                                          
+
+from ingestion.retrieval.retriever import (                                   
+    semantic_search,                                                               
+    format_context_for_llm,                                                        
+    get_dtc_metadata,                                                              
+)                                                                                  
+from ingestion.retrieval.session_handler import (                             
+    start_session,                                                                 
+    advance_session,                                                               
+    get_active_session_for_conversation,                                           
+)                                                                                  
 
 router = APIRouter()
+
+# ── Diagnostic routing helper ─────────────────────────────────────────────────
+DTC_PATTERN  = re.compile(r'\b(P[0-9A-Fa-f]{4}(?:-[0-9A-Fa-f]{2})?)\b')         
+CANCEL_WORDS = {"cancel", "stop", "exit", "quit", "abort"}                        
+
+async def handle_diagnostic_routing(message: str, conversation_id: str):          
+    msg_lower = message.strip().lower()                                            
+                                                                                   
+    # Cancel intent                                                                
+    if any(w in msg_lower for w in CANCEL_WORDS):                                 
+        active = get_active_session_for_conversation(conversation_id)              
+        if active:                                                                 
+            from ingestion.retrieval.session_handler import close_session     
+            close_session(active["session_id"])                                    
+            return {"response": "Diagnostic session cancelled. How else can I help?"}  
+                                                                                   
+    # Already in a session — treat message as YES/NO answer                       
+    active = get_active_session_for_conversation(conversation_id)                  
+    if active:                                                                     
+        result = advance_session(active["session_id"], message)                   
+        return {"response": result["message"]}                                    
+                                                                                   
+    # New DTC detected in message                                                  
+    match = DTC_PATTERN.search(message)                                            
+    if match:                                                                      
+        dtc_code = match.group(1).upper()                                         
+        meta = get_dtc_metadata(dtc_code)                                         
+        if meta:                                                                   
+            result = start_session(conversation_id, dtc_code)                     
+            if "error" not in result:                                              
+                return {"response": result["message"]}                            
+                                                                                   
+    return None   # no diagnostic match — fall through to normal LLM              
+# ─────────────────────────────────────────────────────────────────────────────  
+
 
 # 1. CREATE CONVERSATION
 @router.post("/conversations")
@@ -59,10 +105,8 @@ def list_conversations(user_id: str):
             "_sort_key": sort_dt,
         })
 
-    # Sort by parsed datetime, not string
     conversations.sort(key=lambda x: x["_sort_key"], reverse=True)
 
-    # Remove the internal sort key before returning
     for c in conversations:
         c.pop("_sort_key")
 
@@ -88,13 +132,15 @@ def get_conversation(conversation_id: str):
     for m in raw_messages:
         if not isinstance(m, dict):
             continue
-        messages.append({
+        msg = {
             "message_id": m.get("message_id", str(uuid.uuid4())),
             "role": m.get("role", ""),
             "content": m.get("content", ""),
-            "sources": m.get("sources", []),
             "created_at": to_ist(m.get("created_at", "")),
-        })
+        }
+        if m.get("role") == "assistant":
+            msg["sources"] = m.get("sources", [])
+        messages.append(msg)
 
     return {
         "conversation_id": str(row["conversationid"]),
@@ -102,6 +148,7 @@ def get_conversation(conversation_id: str):
         "updated_at": to_ist(updated_at),
         "messages": messages,
     }
+
 
 # 4. DELETE CONVERSATION
 @router.delete("/conversations/{conversation_id}")
@@ -127,20 +174,33 @@ def send_message(conversation_id: str, body: SendMessageRequest):
     row = res.data[0]
     current_title = row.get("conversationtitle", "New Conversation")
     history = row.get("conversationdata") or []
-
     ts = now_iso()
 
     user_entry = {
         "message_id": str(uuid.uuid4()),
         "role": "user",
         "content": body.message,
-        "sources": [],
         "created_at": ts,
     }
     history.append(user_entry)
 
     llm_history = [{"role": m["role"], "content": m["content"]} for m in history]
-    assistant_reply = generate_bot_reply(llm_history)
+
+    # ── Diagnostic check ──────────────────────────────────────────────────   
+    import asyncio                                                              
+    diagnostic = asyncio.get_event_loop().run_until_complete(                  
+        handle_diagnostic_routing(body.message, conversation_id)               
+    )                                                                           
+    if diagnostic:                                                              
+        assistant_reply = diagnostic["response"]                               
+    else:                                                                       
+        # Enrich LLM with semantic context                                     
+        chunks  = semantic_search(body.message, top_k=4)                       
+        context = format_context_for_llm(chunks)                               
+        if context:                                                             
+            llm_history.insert(0, {"role": "system", "content": context})     
+        assistant_reply = generate_bot_reply(llm_history)                      
+    # ─────────────────────────────────────────────────────────────────────── 
 
     assistant_entry = {
         "message_id": str(uuid.uuid4()),
@@ -151,7 +211,6 @@ def send_message(conversation_id: str, body: SendMessageRequest):
     }
     history.append(assistant_entry)
 
-    # Keep retrying title until user says something meaningful
     new_title = current_title
     if current_title == "New Conversation":
         new_title = generate_title(body.message)
@@ -165,6 +224,92 @@ def send_message(conversation_id: str, body: SendMessageRequest):
     return {
         "conversation_id": conversation_id,
         "messages": [
-            {"role": m["role"], "content": m["content"]} for m in history
+            {
+                "message_id": m.get("message_id", ""),
+                "role": m.get("role", ""),
+                "content": m.get("content", ""),
+                "created_at": to_ist(m.get("created_at", "")),
+                **( {"sources": m.get("sources", [])} if m.get("role") == "assistant" else {} )
+            } for m in history
         ]
     }
+
+
+# 6. WEBSOCKET
+@router.websocket("/ws/{conversation_id}")
+async def websocket_chat(websocket: WebSocket, conversation_id: str):
+    await websocket.accept()
+
+    try:
+        while True:
+            user_message = await websocket.receive_text()
+
+            res = db.table("conversations") \
+                .select("conversationtitle, conversationdata") \
+                .eq("conversationid", conversation_id) \
+                .execute()
+
+            if not res.data:
+                await websocket.send_text("Conversation not found.")
+                break
+
+            row = res.data[0]
+            current_title = row.get("conversationtitle", "New Conversation")
+            history = row.get("conversationdata") or []
+            ts = now_iso()
+
+            user_entry = {
+                "message_id": str(uuid.uuid4()),
+                "role": "user",
+                "content": user_message,
+                "sources": [],
+                "created_at": ts,
+            }
+            history.append(user_entry)
+
+            llm_history = [{"role": m["role"], "content": m["content"]} for m in history]
+
+            # ── Diagnostic check ──────────────────────────────────────────   
+            diagnostic = await handle_diagnostic_routing(                      
+                user_message, conversation_id                                  
+            )                                                                  
+            if diagnostic:                                                     
+                full_reply = diagnostic["response"]                            
+                await websocket.send_text(full_reply)                         
+                await websocket.send_text("[DONE]")                           
+            else:                                                              
+                # Enrich LLM with semantic context                             
+                chunks  = semantic_search(user_message, top_k=4)              
+                context = format_context_for_llm(chunks)                      
+                if context:                                                    
+                    llm_history.insert(0, {"role": "system", "content": context})  
+                                                                               
+                # Stream reply — unchanged from your original                  
+                full_reply = ""
+                for chunk in generate_bot_reply_stream(llm_history):
+                    full_reply += chunk
+                    await websocket.send_text(chunk)
+                await websocket.send_text("[DONE]")
+            # ─────────────────────────────────────────────────────────────── 
+
+            assistant_entry = {
+                "message_id": str(uuid.uuid4()),
+                "role": "assistant",
+                "content": full_reply,
+                "sources": [],
+                "created_at": now_iso(),
+            }
+            history.append(assistant_entry)
+
+            new_title = current_title
+            if current_title == "New Conversation":
+                new_title = generate_title(user_message)
+
+            db.table("conversations").update({
+                "conversationdata": history,
+                "conversationtitle": new_title,
+                "updatedat": now_iso(),
+            }).eq("conversationid", conversation_id).execute()
+
+    except WebSocketDisconnect:
+        print(f"Client disconnected from conversation {conversation_id}")
