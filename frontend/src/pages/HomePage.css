@@ -1,0 +1,833 @@
+/* CortexForge Diagnostics – same color theme as chat page (light green/gray) */
+
+.cortex-page {
+  --login-bg: #e5e8e5;
+  --login-bg-panel: #e0e4e0;
+  --login-text: #1e2620;
+  --login-text-muted: #4a5c52;
+  --login-cta-bg: #5b7a68;
+  --login-cta-text: #f2f4f2;
+  --login-cta-hover-bg: #4a6656;
+  --login-cta-hover-border: #3d5648;
+  --login-card-bg: rgba(232, 236, 232, 0.95);
+  --login-card-border: rgba(91, 122, 104, 0.35);
+  --login-input-focus-ring: rgba(91, 122, 104, 0.25);
+  background: var(--login-bg);
+  color: var(--login-text);
+  font-family: "Changa One", cursive, system-ui, sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.cortex-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .cortex-container {
+    padding: 0 2rem;
+  }
+}
+
+/* ========== 1. Hero ========== */
+.cortex-hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.cortex-hero-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(229, 232, 229, 0.2) 0%, rgba(224, 228, 224, 0.15) 50%, rgba(220, 224, 220, 0.15) 100%);
+  pointer-events: none;
+}
+
+.cortex-hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(91, 122, 104, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91, 122, 104, 0.06) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: cortex-grid-pulse 8s ease-in-out infinite;
+}
+
+@keyframes cortex-grid-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.cortex-hero-glow {
+  position: absolute;
+  top: -30%;
+  right: -20%;
+  width: 60%;
+  height: 80%;
+  background: radial-gradient(ellipse, rgba(91, 122, 104, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cortex-hero-inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3rem;
+  align-items: center;
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+}
+
+@media (min-width: 1024px) {
+  .cortex-hero-inner {
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+  }
+}
+
+.cortex-hero-title {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.75rem;
+  background: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.85) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cortex-hero-title-line {
+  white-space: nowrap;
+}
+
+.cortex-hero-title-brand {
+  font-style: italic;
+}
+
+.cortex-hero-tagline {
+  font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+  color: var(--login-cta-bg);
+  font-weight: 600;
+  margin: 0 0 1rem;
+  letter-spacing: -0.01em;
+}
+
+.cortex-hero-sub {
+  font-size: 1rem;
+  color: var(--login-text-muted);
+  max-width: 520px;
+  margin: 0 0 2rem;
+}
+
+.cortex-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.cortex-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 10px;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.cortex-btn:hover {
+  transform: translateY(-2px);
+}
+
+.cortex-btn-primary {
+  background: var(--login-cta-bg);
+  color: var(--login-cta-text);
+  border: 1px solid var(--login-cta-bg);
+  letter-spacing: 0.1em;
+}
+
+.cortex-btn-primary:hover {
+  background: var(--login-cta-hover-bg);
+  border-color: var(--login-cta-hover-border);
+  box-shadow: 0 8px 24px rgba(91, 122, 104, 0.3);
+}
+
+.cortex-btn-secondary {
+  background: transparent;
+  color: var(--login-text);
+  border: 1px solid var(--login-card-border);
+}
+
+.cortex-btn-secondary:hover {
+  background: rgba(91, 122, 104, 0.08);
+  border-color: rgba(91, 122, 104, 0.4);
+}
+
+.cortex-hero-visual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cortex-hero-dashboard {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(22, 24, 29, 0.9);
+  border: 1px solid var(--login-card-border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+}
+
+.cortex-dash-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--login-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--login-card-border);
+}
+
+.cortex-dash-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cortex-dash-line {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: rgba(167, 243, 208, 0.9);
+  opacity: 0;
+  animation: cortex-dash-fade 0.5s ease-out forwards;
+}
+
+.cortex-dash-cursor {
+  color: var(--login-cta-bg);
+  animation: cortex-blink 1s step-end infinite;
+}
+
+@keyframes cortex-dash-fade {
+  to { opacity: 1; }
+}
+
+@keyframes cortex-blink {
+  50% { opacity: 0; }
+}
+
+/* ========== 2. Platform Overview ========== */
+.cortex-section {
+  padding: 4rem 0;
+}
+
+@media (min-width: 768px) {
+  .cortex-section {
+    padding: 5rem 0;
+  }
+}
+
+.cortex-section-title {
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: center;
+  margin: 0 0 2rem;
+}
+
+/* ========== Platform Capabilities: title left (full section), right scrolls one-by-one ========== */
+.cortex-capabilities {
+  background: var(--login-bg-panel);
+}
+
+.cortex-capabilities-wrap {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .cortex-capabilities-wrap {
+    grid-template-columns: 1fr 1.2fr;
+    gap: 3rem;
+    padding: 0 2rem;
+    align-items: start;
+  }
+}
+
+.cortex-capabilities-left {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+@media (min-width: 1024px) {
+  .cortex-capabilities-left {
+    position: sticky;
+    top: 6rem;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+}
+
+.cortex-capabilities-title {
+  font-size: clamp(2.25rem, 5.5vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: center;
+  margin: 0;
+  color: var(--login-text);
+}
+
+.cortex-capabilities-right {
+  overflow-y: visible;
+}
+
+.cortex-cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  scroll-snap-type: y proximity;
+}
+
+@media (min-width: 1024px) {
+  .cortex-cards-stack {
+    min-height: 280vh;
+  }
+}
+
+.cortex-cards-stack .cortex-card {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0.5rem 0;
+  transition: none;
+}
+
+.cortex-cards-stack .cortex-card-icon {
+  flex-shrink: 0;
+  margin-bottom: 0;
+  margin-right: 1rem;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(91, 122, 104, 0.12);
+  border-radius: 50%;
+  color: var(--login-cta-bg);
+}
+
+.cortex-cards-stack .cortex-card-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.cortex-card-right {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 0.5rem;
+  padding-left: 1rem;
+}
+
+.cortex-card-right .cortex-card-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--login-text);
+  line-height: 1.3;
+}
+
+.cortex-card-right .cortex-card-desc {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--login-text-muted);
+  line-height: 1.6;
+}
+
+/* Right section: only title (top) and content (bottom) */
+.cortex-card-right .cortex-card-title:first-child {
+  margin-top: 0;
+}
+
+.cortex-card-right .cortex-card-desc:last-child {
+  margin-bottom: 0;
+}
+
+.cortex-cards-stack .cortex-card:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: transparent;
+}
+
+@media (min-width: 1024px) {
+  .cortex-cards-stack .cortex-card {
+    min-height: 50vh;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0.75rem 0;
+  }
+}
+
+.cortex-card {
+  background: var(--login-card-bg);
+  border: 1px solid var(--login-card-border);
+  border-radius: 14px;
+  padding: 1.75rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.cortex-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+  border-color: rgba(91, 122, 104, 0.5);
+}
+
+.cortex-card-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(91, 122, 104, 0.15);
+  border-radius: 10px;
+  margin-bottom: 1.25rem;
+  color: var(--login-cta-bg);
+}
+
+.cortex-card-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.cortex-card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  color: var(--login-text);
+}
+
+.cortex-card-desc {
+  font-size: 0.9375rem;
+  color: var(--login-text-muted);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ========== 4. Workflow: title top, steps scroll horizontally ========== */
+.cortex-workflow {
+  background: linear-gradient(180deg, transparent 0%, rgba(91, 122, 104, 0.06) 50%, transparent 100%);
+}
+
+.cortex-workflow-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.cortex-workflow-top {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.cortex-workflow-title {
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--login-text);
+}
+
+.cortex-workflow-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(91, 122, 104, 0.3) rgba(91, 122, 104, 0.08);
+}
+
+.cortex-workflow-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.cortex-workflow-scroll::-webkit-scrollbar-track {
+  background: rgba(91, 122, 104, 0.08);
+  border-radius: 3px;
+}
+
+.cortex-workflow-scroll::-webkit-scrollbar-thumb {
+  background: rgba(91, 122, 104, 0.3);
+  border-radius: 3px;
+}
+
+.cortex-timeline {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 0;
+  min-width: min-content;
+  padding: 0.5rem 0;
+}
+
+.cortex-timeline-step {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 200px;
+  min-width: 200px;
+  padding: 1.25rem 1rem;
+  background: var(--login-card-bg);
+  border: 1px solid var(--login-card-border);
+  border-radius: 12px;
+  transition: transform 0.2s, border-color 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.cortex-timeline-step:hover {
+  transform: translateY(-2px);
+  border-color: rgba(91, 122, 104, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.cortex-timeline-num {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--login-cta-bg);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  border-radius: 50%;
+  margin-bottom: 0.75rem;
+}
+
+.cortex-timeline-step p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--login-text-muted);
+  line-height: 1.4;
+}
+
+.cortex-timeline-connector {
+  flex-shrink: 0;
+  width: 20px;
+  align-self: center;
+  height: 2px;
+  min-height: 2px;
+  background: repeating-linear-gradient(90deg, var(--login-card-border) 0, var(--login-card-border) 4px, transparent 4px, transparent 8px);
+}
+
+@media (min-width: 768px) {
+  .cortex-timeline-connector {
+    width: 28px;
+  }
+}
+
+/* ========== 5. Problem / Value ========== */
+.cortex-problem-lead,
+.cortex-problem-solution {
+  max-width: 680px;
+  margin: 0 auto 1rem;
+  text-align: center;
+  color: var(--login-text-muted);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.cortex-problem-solution {
+  margin-bottom: 2.5rem;
+  color: var(--login-text);
+  font-weight: 500;
+}
+
+.cortex-problem-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+
+@media (min-width: 640px) {
+  .cortex-problem-cards {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+.cortex-problem-card {
+  background: var(--login-card-bg);
+  border: 1px solid var(--login-card-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.cortex-problem-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(91, 122, 104, 0.5);
+}
+
+.cortex-problem-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--login-cta-bg);
+}
+
+.cortex-problem-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.cortex-problem-card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+  color: var(--login-text);
+}
+
+.cortex-problem-card p {
+  font-size: 0.875rem;
+  color: var(--login-text-muted);
+  margin: 0;
+}
+
+/* ========== 6. Platform Modules ========== */
+.cortex-modules {
+  background: var(--login-bg-panel);
+}
+
+.cortex-modules-group {
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  border-radius: 14px;
+  background: rgba(232, 236, 232, 0.4);
+  border: 1px solid rgba(91, 122, 104, 0.12);
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+.cortex-modules-group:first-of-type {
+  margin-top: 2rem;
+}
+
+.cortex-modules-group:hover {
+  background: rgba(245, 248, 245, 0.95);
+  border-color: rgba(91, 122, 104, 0.2);
+}
+
+.cortex-modules-group-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--login-text);
+  margin: 0 0 1rem;
+  letter-spacing: -0.01em;
+}
+
+.cortex-modules-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin-top: 0;
+}
+
+@media (min-width: 640px) {
+  .cortex-modules-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .cortex-modules-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+.cortex-module-card {
+  background: var(--login-card-bg);
+  border: 1px solid var(--login-card-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.cortex-module-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(91, 122, 104, 0.5);
+}
+
+.cortex-module-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--login-cta-bg);
+  margin-bottom: 1rem;
+}
+
+.cortex-module-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.cortex-module-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+  color: var(--login-text);
+}
+
+.cortex-module-desc {
+  font-size: 0.875rem;
+  color: var(--login-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ========== 7. Enterprise Integration ========== */
+.cortex-enterprise-lead {
+  text-align: center;
+  color: var(--login-text-muted);
+  margin: 0 0 2rem;
+  font-size: 1rem;
+}
+
+.cortex-integration-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+  .cortex-integration-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+.cortex-integration-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem;
+  background: var(--login-card-bg);
+  border: 1px solid var(--login-card-border);
+  border-radius: 12px;
+  font-size: 0.875rem;
+  color: var(--login-text);
+  text-align: center;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.cortex-integration-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(91, 122, 104, 0.5);
+}
+
+.cortex-integration-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--login-cta-bg);
+}
+
+.cortex-integration-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ========== 8. Footer ========== */
+.cortex-footer {
+  padding: 3rem 0 2rem;
+  border-top: 1px solid var(--login-card-border);
+  background: var(--login-bg-panel);
+}
+
+.cortex-footer-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .cortex-footer-inner {
+    flex-direction: row;
+    justify-content: space-between;
+    text-align: left;
+  }
+}
+
+.cortex-footer-brand {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--login-text);
+}
+
+.cortex-footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.25rem;
+}
+
+.cortex-footer-nav a {
+  color: var(--login-text-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: color 0.2s;
+}
+
+.cortex-footer-nav a:hover {
+  color: var(--login-text);
+}
+
+.cortex-footer-copy {
+  font-size: 0.8125rem;
+  color: var(--login-text-muted);
+}

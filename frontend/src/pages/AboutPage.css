@@ -1,0 +1,283 @@
+/* About page – smooth page background; only sections have fit background */
+
+.cortex-about {
+  background: var(--login-bg);
+}
+
+.cortex-about-content {
+  padding: 0;
+}
+
+/* Sections: content only, no card */
+.cortex-about-section {
+  padding: 2.5rem 0;
+  margin: 0 auto 2rem;
+  max-width: 800px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.cortex-about-section:last-child {
+  margin-bottom: 0;
+}
+
+@media (min-width: 768px) {
+  .cortex-about-section {
+    padding: 3rem 0;
+    margin-bottom: 2.5rem;
+  }
+}
+
+/* First section: background image fills viewport, no white margin */
+.cortex-about-hero-zone {
+  position: relative;
+  padding: 0;
+  margin-bottom: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}
+
+.cortex-about-hero-zone .cortex-container {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .cortex-about-hero-zone .cortex-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.cortex-about-hero-zone .cortex-about-section {
+  margin-bottom: 0;
+}
+
+.cortex-about .cortex-section-title {
+  text-align: center;
+  margin: 0 0 1.5rem;
+  color: var(--login-text);
+}
+
+.cortex-about-lead {
+  max-width: 720px;
+  margin: 0 auto 1.25rem;
+  text-align: left;
+  color: var(--login-text-muted);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+
+.cortex-about-lead:last-of-type {
+  margin-bottom: 0;
+}
+
+.cortex-about-alt {
+  background: linear-gradient(180deg, rgba(232, 236, 232, 0.98) 0%, var(--login-card-bg) 100%);
+}
+
+.cortex-about-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 auto 1.25rem;
+  max-width: 720px;
+}
+
+.cortex-about-list li {
+  position: relative;
+  padding-left: 1.5rem;
+  margin-bottom: 0.6rem;
+  color: var(--login-text-muted);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+.cortex-about-list li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--login-cta-bg);
+  font-weight: 700;
+}
+
+.cortex-about-flow {
+  max-width: 720px;
+  margin: 0 auto 1.25rem;
+  padding: 1rem 1.25rem;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--login-cta-bg);
+  background: rgba(91, 122, 104, 0.08);
+  border-radius: 10px;
+  border: 1px solid rgba(91, 122, 104, 0.2);
+  line-height: 1.5;
+}
+
+/* Vision section: two columns, blob left + image right (app theme) */
+.cortex-about-vision-section {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+}
+
+.cortex-about-vision-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 70vh;
+  padding: 2rem 1.5rem;
+  background: var(--login-bg);
+}
+
+@media (min-width: 900px) {
+  .cortex-about-vision-wrap {
+    min-height: 80vh;
+    padding: 3rem 2rem;
+  }
+}
+
+.cortex-about-vision-left {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 520px;
+}
+
+@media (min-width: 768px) {
+  .cortex-about-vision-left {
+    max-width: 540px;
+  }
+}
+
+.cortex-about-vision-blob {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  padding: 2rem 1.75rem;
+  background: var(--login-card-bg);
+  border: 1px solid var(--login-card-border);
+  border-radius: 60% 40% 50% 50% / 50% 60% 40% 50%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+@media (min-width: 768px) {
+  .cortex-about-vision-blob {
+    padding: 2.5rem 2rem;
+    border-radius: 55% 45% 52% 48% / 48% 55% 45% 52%;
+  }
+}
+
+.cortex-about-vision-img-wrap {
+  margin-bottom: 1.25rem;
+}
+
+.cortex-about-vision-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--login-cta-bg);
+  opacity: 0.4;
+}
+
+@media (min-width: 768px) {
+  .cortex-about-vision-img {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+.cortex-about-vision-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--login-text);
+  margin: 0 0 1rem;
+  letter-spacing: -0.02em;
+}
+
+.cortex-about-vision-text {
+  font-size: 1rem;
+  color: var(--login-text-muted);
+  line-height: 1.7;
+  margin: 0 0 1.5rem;
+}
+
+.cortex-about-vision-cta {
+  display: inline-block;
+  padding: 0.65rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--login-cta-text);
+  background: var(--login-cta-bg);
+  border: 1px solid var(--login-cta-bg);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.cortex-about-vision-cta:hover {
+  background: var(--login-cta-hover-bg);
+  border-color: var(--login-cta-hover-border);
+}
+
+.cortex-about-vision-right {
+  min-height: 40vh;
+  background-color: var(--login-bg-panel);
+}
+
+@media (min-width: 900px) {
+  .cortex-about-vision-right {
+    min-height: 80vh;
+  }
+}
+
+.cortex-about-vision {
+  font-style: italic;
+  text-align: center;
+  font-size: 1.125rem;
+}
+
+/* Bottom of About page — company logo only, 75% of section width, fit */
+/* Footer: "Developed by" top, logo full width, height 75% shown */
+.cortex-about-footer {
+  width: 100%;
+  padding: 2rem 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(180deg, var(--login-bg) 0%, var(--login-bg-panel) 50%, #99c199 100%);
+}
+
+.cortex-about-footer-title {
+  font-size: 3rem;
+  font-weight: 500;
+  color: var(--login-text);
+  margin: 0 0 1rem;
+}
+
+/* Logo: full width; only top ~70% of words visible, bottom clipped */
+.cortex-about-footer-logo-wrap {
+  width: 50%;
+  overflow: hidden;
+  position: relative;
+  height: 0;
+  padding-bottom: 15.5%;
+}
+
+.cortex-about-footer-logo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: auto;
+  display: block;
+}

@@ -79,13 +79,29 @@ def create_conversation(body: CreateConversationRequest):
     }
 
 
+def _is_valid_uuid(s: str) -> bool:
+    try:
+        uuid.UUID(s)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
 # 2. LIST CONVERSATIONS FOR A USER
 @router.get("/conversations/user/{user_id}")
 def list_conversations(user_id: str):
-    res = db.table("conversations") \
-        .select("conversationid, conversationtitle, updatedat, createdat") \
-        .eq("userid", user_id) \
-        .execute()
+    if not _is_valid_uuid(user_id):
+        return {"conversations": []}
+    try:
+        res = db.table("conversations") \
+            .select("conversationid, conversationtitle, updatedat, createdat") \
+            .eq("userid", user_id) \
+            .execute()
+    except Exception as e:
+        err_msg = str(e).lower()
+        if "uuid" in err_msg or "invalid" in err_msg:
+            return {"conversations": []}
+        raise HTTPException(status_code=500, detail="Failed to load conversations.")
 
     conversations = []
     for row in res.data:
@@ -186,11 +202,12 @@ def send_message(conversation_id: str, body: SendMessageRequest):
 
     llm_history = [{"role": m["role"], "content": m["content"]} for m in history]
 
-    # ── Diagnostic check ──────────────────────────────────────────────────   
-    import asyncio                                                              
-    diagnostic = asyncio.get_event_loop().run_until_complete(                  
-        handle_diagnostic_routing(body.message, conversation_id)               
-    )                                                                           
+    # ── Diagnostic check (run in new loop; endpoint runs in thread pool) ───   
+    import asyncio
+    try:
+        diagnostic = asyncio.run(handle_diagnostic_routing(body.message, conversation_id))
+    except RuntimeError:
+        diagnostic = None
     if diagnostic:                                                              
         assistant_reply = diagnostic["response"]                               
     else:                                                                       
