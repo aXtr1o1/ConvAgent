@@ -53,7 +53,7 @@ export default function AppContent() {
         <ChatSidebar visible={sidebarVisible} exiting={sidebarIsExiting} />
       )}
       <Routes>
-        <Route path="/login" element={loggedIn ? <Navigate to="/" replace /> : <LoginPage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={loggedIn ? <MainLayout /> : <Navigate to="/login" replace />}>
           <Route index element={<HomePage />} />
           <Route path="chat" element={<ChatPage />} />

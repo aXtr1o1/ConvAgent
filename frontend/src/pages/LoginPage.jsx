@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { validateLogin } from '../api/auth';
+import { validateLogin, isLoggedIn } from '../api/auth';
 import { useTransition } from '../context/TransitionContext';
 
 function LoginPage() {
@@ -24,6 +24,12 @@ function LoginPage() {
     if (!transitioningToLanding) setShowHeaderDuringTransition(false);
   }, [transitioningToLanding, setShowHeaderDuringTransition]);
 
+  useEffect(() => {
+    if (isLoggedIn() && !transitioningToLanding) {
+      navigate('/', { replace: true });
+    }
+  }, [navigate, transitioningToLanding]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -36,7 +42,7 @@ function LoginPage() {
         if (data.username) localStorage.setItem('username', data.username);
         setTransitioningToLanding(true);
         setShowHeaderDuringTransition(true);
-        setTimeout(() => navigate('/', { state: { fromLogin: true } }), 1200);
+        setTimeout(() => navigate('/', { state: { fromLogin: true } }), 3500);
         return;
       }
       // Failed: { status: "failed", detail: "Invalid username or credentials." }
@@ -92,7 +98,7 @@ function LoginPage() {
               className="login-page-form-cta"
               disabled={loading}
             >
-              <span>{loading ? 'Checking…' : 'Continue to chat'}</span>
+              <span>{loading ? 'Initiating...' : 'Launch System'}</span>
               {!loading && (
                 <span className="login-page-form-cta-arrow" aria-hidden="true">→</span>
               )}

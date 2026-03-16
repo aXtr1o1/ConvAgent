@@ -57,7 +57,7 @@ function AboutPage() {
 
       {/* Bottom — Developed by (top) + logo full width, 75% height shown */}
       <section className="cortex-about-footer">
-        <p className="cortex-about-footer-title">Developed by</p>
+        <p className="cortex-about-footer-title">Developed <em>by</em></p>
         <div className="cortex-about-footer-logo-wrap">
           <img
             src={`${process.env.PUBLIC_URL || ''}/AI-Company-logo.png`}

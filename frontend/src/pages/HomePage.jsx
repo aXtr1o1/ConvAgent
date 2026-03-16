@@ -1,10 +1,55 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import './HomePage.css';
 
 const heroBgImage = `${process.env.PUBLIC_URL || ''}/bg-image.avif`;
+const carGifUrl = 'https://cdn.dribbble.com/users/145629/screenshots/1944279/loader0001.gif';
 
 function HomePage() {
+  const location = useLocation();
+  const fromLogin = location.state?.fromLogin === true;
+  const [popIn, setPopIn] = useState(!fromLogin);
+  const workflowSectionRef = useRef(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [sectionVisible, setSectionVisible] = useState(false);
+
+  useEffect(() => {
+    if (fromLogin) {
+      const t = requestAnimationFrame(() => {
+        requestAnimationFrame(() => setPopIn(true));
+      });
+      return () => cancelAnimationFrame(t);
+    }
+  }, [fromLogin]);
+
+  useEffect(() => {
+    const section = workflowSectionRef.current;
+    if (!section) return;
+
+    const onScroll = () => {
+      const rect = section.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const sectionTop = rect.top;
+      const sectionBottom = rect.bottom;
+
+      const inView = sectionBottom > 0 && sectionTop < viewportHeight;
+      setSectionVisible(inView);
+
+      if (!inView) {
+        if (sectionBottom <= 0) setScrollProgress(1);
+        else setScrollProgress(0);
+        return;
+      }
+      /* 0 = section just entering from bottom, 1 = section top at viewport top (leaving) */
+      const progress = (viewportHeight - sectionTop) / viewportHeight;
+      setScrollProgress(Math.max(0, Math.min(1, progress)));
+    };
+
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <div className="cortex-page">
       {/* 1. Hero Section – background image only for this section */}
@@ -21,7 +66,9 @@ function HomePage() {
           <div className="cortex-hero-grid" aria-hidden="true" />
           <div className="cortex-hero-glow" aria-hidden="true" />
         </div>
-        <div className="cortex-container cortex-hero-inner">
+        <div
+          className={`cortex-container cortex-hero-inner ${fromLogin ? 'cortex-page__content--from-login' : ''} ${fromLogin && popIn ? 'cortex-page__content--visible' : ''}`}
+        >
           <div className="cortex-hero-content">
             <h1 className="cortex-hero-title">
               <span className="cortex-hero-title-line">
@@ -61,7 +108,7 @@ function HomePage() {
       <section className="cortex-section cortex-capabilities">
         <div className="cortex-capabilities-wrap">
           <div className="cortex-capabilities-left">
-            <h2 className="cortex-capabilities-title">Platform Capabilities</h2>
+            <h2 className="cortex-capabilities-title">Platform <em>Capabilities</em></h2>
           </div>
           <div className="cortex-capabilities-right">
             <div className="cortex-cards-stack">
@@ -115,11 +162,11 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Technician Workflow: title top, steps scroll horizontally */}
-      <section className="cortex-section cortex-workflow">
+      {/* Technician Workflow: title top, steps scroll horizontally; car at bottom moves with scroll */}
+      <section ref={workflowSectionRef} className="cortex-section cortex-workflow">
         <div className="cortex-workflow-wrap">
           <div className="cortex-workflow-top">
-            <h2 className="cortex-workflow-title">From Fault Code to Root Cause</h2>
+            <h2 className="cortex-workflow-title">From <em>Fault Code</em> to Root Cause</h2>
           </div>
           <div className="cortex-workflow-scroll" role="region" aria-label="Workflow steps">
             <div className="cortex-timeline">
@@ -147,6 +194,19 @@ function HomePage() {
                 <span className="cortex-timeline-num">5</span>
                 <p>Identify root cause and recommended corrective action</p>
               </div>
+            </div>
+          </div>
+          <br></br>
+          <div
+            className="cortex-workflow-car-track"
+            aria-hidden="true"
+            style={{ opacity: sectionVisible ? 1 : 0 }}
+          >
+            <div
+              className="cortex-workflow-car"
+              style={{ left: `${9 + scrollProgress * 82}%` }}
+            >
+              <img src={carGifUrl} alt="" />
             </div>
           </div>
         </div>
@@ -274,10 +334,9 @@ function HomePage() {
         <div className="cortex-container cortex-footer-inner">
           <div className="cortex-footer-brand">CortexForge Diagnostics</div>
           <nav className="cortex-footer-nav" aria-label="Footer">
-          
             <Link to="/about">About</Link>
-            
-            <a href="/">Documentation</a>
+            <a href={`${process.env.PUBLIC_URL || ''}/TechnicalGuideDocument-CortexForgeDiagnosticAIAGent.pdf`} target="_blank" rel="noopener noreferrer">Documentation</a>
+            <a href="https://mail.google.com/mail/?view=cm&to=info@axtr.in" target="_blank" rel="noopener noreferrer">For query: info@axtr.in</a>
           </nav>
           <div className="cortex-footer-copy">
             &copy; {new Date().getFullYear()} aXtrLabs. All rights reserved.

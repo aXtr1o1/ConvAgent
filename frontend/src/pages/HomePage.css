@@ -19,6 +19,18 @@
   min-height: 100vh;
 }
 
+/* After login: only the hero content appears (fade), background unchanged */
+.cortex-hero-inner.cortex-page__content--from-login:not(.cortex-page__content--visible) {
+  opacity: 0;
+}
+.cortex-hero-inner.cortex-page__content--visible {
+  animation: cortex-content-appear 0.1s ease-out forwards;
+}
+@keyframes cortex-content-appear {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .cortex-container {
   width: 100%;
   max-width: 1200px;
@@ -441,7 +453,7 @@
 
 /* ========== 4. Workflow: title top, steps scroll horizontally ========== */
 .cortex-workflow {
-  background: linear-gradient(180deg, transparent 0%, rgba(91, 122, 104, 0.06) 50%, transparent 100%);
+  background: #FFFFFF;
 }
 
 .cortex-workflow-wrap {
@@ -488,6 +500,7 @@
 }
 
 .cortex-timeline {
+  position: relative;
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
@@ -555,6 +568,33 @@
   .cortex-timeline-connector {
     width: 28px;
   }
+}
+
+/* Car at bottom of workflow: moves step 1→5 as user scrolls down, 5→1 as user scrolls up */
+.cortex-workflow-car-track {
+  position: relative;
+  width: 100%;
+  height: 100px;
+  margin-top: 0.5rem;
+  transition: opacity 0.3s ease;
+}
+.cortex-workflow-car {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: left 0.12s ease-out;
+  pointer-events: none;
+  z-index: 2;
+}
+.cortex-workflow-car img {
+  width: 180px;
+  height: auto;
+  display: block;
+  background: transparent;
+  border-radius: 0;
 }
 
 /* ========== 5. Problem / Value ========== */

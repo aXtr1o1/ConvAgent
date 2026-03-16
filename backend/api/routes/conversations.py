@@ -200,7 +200,7 @@ def send_message(conversation_id: str, body: SendMessageRequest):
     }
     history.append(user_entry)
 
-    llm_history = [{"role": m["role"], "content": m["content"]} for m in history]
+    llm_history = [{"role": m["role"], "content": m["content"]} for m in history[:10]]
 
     # ── Diagnostic check (run in new loop; endpoint runs in thread pool) ───   
     import asyncio
