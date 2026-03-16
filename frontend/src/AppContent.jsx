@@ -33,7 +33,7 @@ export default function AppContent() {
       const t = setTimeout(() => setSidebarExiting(false), SIDEBAR_EXIT_MS);
       return () => clearTimeout(t);
     }
-  }, [location.pathname]);
+  }, [location.pathname, leavingChat]);
 
   useEffect(() => {
     prevPathRef.current = location.pathname;

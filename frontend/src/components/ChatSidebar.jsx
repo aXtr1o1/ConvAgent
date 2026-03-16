@@ -44,7 +44,7 @@ function ChatSidebar({ visible, exiting }) {
     }
     load();
     return () => { cancelled = true; };
-  }, [visible, exiting, userId]);
+  }, [visible, exiting, userId,showErrorToast]);
 
   useEffect(() => {
     if (!notImplemented) return;
