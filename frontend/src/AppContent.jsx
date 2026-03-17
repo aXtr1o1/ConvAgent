@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTransition } from './context/TransitionContext';
 import MainHeader from './components/MainHeader';
@@ -11,33 +11,16 @@ import AboutPage from './pages/AboutPage';
 import { Route, Routes, Navigate } from 'react-router-dom';
 import { isLoggedIn } from './api/auth';
 
-const SIDEBAR_EXIT_MS = 400;
-
 export default function AppContent() {
   const location = useLocation();
   const { showHeaderDuringTransition } = useTransition();
-  const [sidebarExiting, setSidebarExiting] = useState(false);
-  const prevPathRef = useRef(location.pathname);
   const loggedIn = isLoggedIn();
 
   const isOnChat = location.pathname.startsWith('/chat');
-  const wasOnChat = prevPathRef.current.startsWith('/chat');
-  const leavingChat = wasOnChat && !isOnChat;
-  const showSidebar = loggedIn && (isOnChat || leavingChat || sidebarExiting);
-  const sidebarVisible = isOnChat && !sidebarExiting;
-  const sidebarIsExiting = (!isOnChat && leavingChat) || sidebarExiting;
-
-  useEffect(() => {
-    if (leavingChat) {
-      setSidebarExiting(true);
-      const t = setTimeout(() => setSidebarExiting(false), SIDEBAR_EXIT_MS);
-      return () => clearTimeout(t);
-    }
-  }, [location.pathname, leavingChat]);
-
-  useEffect(() => {
-    prevPathRef.current = location.pathname;
-  }, [location.pathname]);
+  // Simplified sidebar logic: show it whenever we're on any /chat route.
+  const showSidebar = loggedIn && isOnChat;
+  const sidebarVisible = isOnChat;
+  const sidebarIsExiting = false;
 
   useEffect(() => {
     window.scrollTo(0, 0);

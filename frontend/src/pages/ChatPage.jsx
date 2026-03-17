@@ -34,7 +34,13 @@ function ChatPage() {
     setLoading(true);
     try {
       const data = await getConversation(conversationId);
-      setMessages(Array.isArray(data?.messages) ? data.messages : []);
+      const msgs = Array.isArray(data?.messages) ? data.messages : [];
+      msgs.sort(
+        (a, b) =>
+          new Date(a.updated_at || a.created_at || 0) -
+          new Date(b.updated_at || b.created_at || 0)
+      );
+      setMessages(msgs);
     } catch (e) {
       showErrorToast(e.message || 'Failed to load conversation');
       setMessages([]);
@@ -83,7 +89,9 @@ function ChatPage() {
         if (conversationId) {
           localStorage.setItem('active_conversation_id', conversationId);
           setActiveConversationId(conversationId);
-          window.dispatchEvent(new CustomEvent('active-conversation-changed', { detail: { id: conversationId } }));
+          window.dispatchEvent(
+            new CustomEvent('active-conversation-changed', { detail: { id: conversationId } })
+          );
         }
       } catch (err) {
         showErrorToast(err.message || 'Failed to create conversation');
@@ -107,7 +115,19 @@ function ChatPage() {
     setSendLoading(true);
     try {
       const data = await sendMessageApi(conversationId, trimmed);
-      setMessages(Array.isArray(data?.messages) ? data.messages : []);
+      const msgs = Array.isArray(data?.messages) ? data.messages : [];
+      msgs.sort(
+        (a, b) =>
+          new Date(a.updated_at || a.created_at || 0) -
+          new Date(b.updated_at || b.created_at || 0)
+      );
+      setMessages(msgs);
+      // Notify sidebar so it can refresh ordering based on updated_at
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('conversation-updated', { detail: { id: conversationId } })
+        );
+      }
     } catch (err) {
       showErrorToast(err.message || 'Failed to send message');
       setMessages((prev) => prev.filter((m) => m.message_id !== optimisticUserMessage.message_id));
@@ -142,7 +162,6 @@ function ChatPage() {
               className="chat-page-loading-gif"
               aria-hidden="true"
             />
-            {/* <span className="chat-page-loading-text">Loading…</span> */}
           </div>
         ) : messages.length > 0 || sendLoading ? (
           <div className="chat-page-messages" role="log" aria-live="polite">
@@ -152,7 +171,9 @@ function ChatPage() {
                 className={`chat-page-msg chat-page-msg--${m.role}`}
                 aria-label={m.role === 'user' ? 'Your message' : 'Assistant reply'}
               >
-                <span className="chat-page-msg-label">{m.role === 'user' ? 'You' : 'Assistant'}</span>
+                <span className="chat-page-msg-label">
+                  {m.role === 'user' ? 'You' : 'Assistant'}
+                </span>
                 <div className="chat-page-msg-content">
                   {m.role === 'assistant' ? (
                     <ReactMarkdown>{m.content || ''}</ReactMarkdown>
@@ -183,31 +204,31 @@ function ChatPage() {
           </div>
         ) : (
           <div className="chat-page-welcome">
-            <h1 className="chat-page-title">Welcome to <em>DCT AI Agent</em></h1>
+            <h1 className="chat-page-title">
+              Welcome to <em>DCT AI Agent</em>
+            </h1>
             <p className="chat-page-subtitle">Ask me anything about your vehicle</p>
           </div>
         )}
       </main>
 
-      
-        <form className="chat-page-composer" onSubmit={handleSend}>
-          <div className="chat-page-composer-inner">
-            <input
-              className="chat-page-input"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Ask Anything..."
-              aria-label="Message"
-              disabled={sendLoading}
-            />
-            <button className="chat-page-send" type="submit" aria-label="Send" disabled={sendLoading}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M12 4l-1.41 1.41L15.17 10H4v2h11.17l-4.58 4.59L12 18l8-8z" />
-              </svg>
-            </button>
-          </div>
-        </form>
-      
+      <form className="chat-page-composer" onSubmit={handleSend}>
+        <div className="chat-page-composer-inner">
+          <input
+            className="chat-page-input"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Ask Anything..."
+            aria-label="Message"
+            disabled={sendLoading}
+          />
+          <button className="chat-page-send" type="submit" aria-label="Send" disabled={sendLoading}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 4l-1.41 1.41L15.17 10H4v2h11.17l-4.58 4.59L12 18l8-8z" />
+            </svg>
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
