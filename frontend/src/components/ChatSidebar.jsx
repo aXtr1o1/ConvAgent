@@ -244,6 +244,12 @@ function ChatSidebar({ visible, exiting }) {
                   </div>
                 )}
 
+                {loadingConversations && (
+                  <div className="chat-sidebar-loading" role="status" aria-live="polite">
+                    Loading conversations…
+                  </div>
+                )}
+
                 {conversations.length === 0 ? (
                   <p className="chat-sidebar-no-conversations">No conversations yet</p>
                 ) : (
