@@ -2,18 +2,16 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-
-from ingestion.collectors.excel_parser         import parse_excel
 from ingestion.collectors.pdf_parser           import parse_pdf
 from ingestion.src.processors.merger          import merge_parsed_documents
 from ingestion.src.processors.chunker          import build_chunks
 from ingestion.src.storage.structured_writer   import write_to_structured_db
 from ingestion.src.storage.vector_writer       import write_to_vector_db
+from config import ingest_folder
 
 logger     = logging.getLogger(__name__)
-INGEST_DIR = Path(os.getenv("INGEST_FOLDER", "./knowledge_base"))
-
-SUPPORTED = {".xlsx", ".xls", ".pdf"}
+INGEST_DIR = Path(ingest_folder)
+SUPPORTED = {".pdf"}
 
 
 # ── Public: single file (existing API unchanged) ──────────────────────────────
@@ -144,10 +142,6 @@ def _write_merged(merged: dict) -> dict:
 # ── File parser dispatcher ────────────────────────────────────────────────────
 
 def _parse_file(path: Path) -> dict:
-    suffix = path.suffix.lower()
-    if suffix in {".xlsx", ".xls"}:
-        return parse_excel(path)
-    elif suffix == ".pdf":
+    if path.suffix.lower() == ".pdf":
         return parse_pdf(path)
-    else:
-        raise ValueError(f"Unsupported file type: {suffix}")
+    raise ValueError(f"Unsupported file type: {path.suffix}")

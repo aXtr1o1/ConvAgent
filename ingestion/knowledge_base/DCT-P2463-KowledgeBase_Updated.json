@@ -1,0 +1,308 @@
+{
+  "dtc_codes": [
+    {
+      "dtc_code": "P2452-12",
+      "system": "DPF System",
+      "description": null,
+      "important_note": null
+    },
+    {
+      "dtc_code": "P2459-00",
+      "system": "DPF System",
+      "description": null,
+      "important_note": null
+    },
+    {
+      "dtc_code": "P1194-00",
+      "system": "DPF System",
+      "description": null,
+      "important_note": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "system": "DPF System",
+      "description": null,
+      "important_note": null
+    },
+    {
+      "dtc_code": "P1629-00",
+      "system": "DPF System",
+      "description": null,
+      "important_note": null
+    }
+  ],
+  "possible_cause": [
+    {
+      "dtc_code": "P2463-00",
+      "cause": "Excessive soot load in DPF",
+      "check_point": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "cause": "Primary fault codes",
+      "check_point": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "cause": "Blocked differential pressure sensor tubes",
+      "check_point": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "cause": "Leak in differential pressure sensor tubes",
+      "check_point": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "cause": "Exhaust gas leak",
+      "check_point": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "cause": "Excessive ash in DPF",
+      "check_point": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "cause": "Engine is producing more soot",
+      "check_point": null
+    }
+  ],
+  "diagnostic_steps": [
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 1,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Connect the Diagnostic Scan Tool and Confirm Active Fault Code 1. Turn the ignition switch to the OFF position. 2. Locate the OBD-II Diagnostic Port, as per the model of the vehicle 3. Firmly plug the diagnostic scan tool connector into the OBD-II port. 4. Turn the ignition key to the ON position (engine must remain OFF). 5. Power on the diagnostic scan tool. 6. Open the Diagnostic App in the Tab & establish connection to the vehicle. 7. Once the connection is established between the VCI and the Diagnostic App, Start the Diagnosis Expected Result Scan tool displays stored fault codes including P245E-11 / FC1881 as active or inactive Next Action If the Primary Error Code is active, proceed with the Step-2. If not, ignore & proceed the diagnosis with the next Primary Error Codes",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 2,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "If P245E-11 / FC1881 is Active Record Freeze Frame / Snapshot Data 1. On the scan tool, navigate to Freeze Frame Data or Snapshot Data for fault P245E-11. 2. Record the following parameters at the time the fault was triggered: \u2022 DPF Differential Pressure Sensor Voltage (target: 0.249 V \u2013 4.75 V) \u2022 Engine RPM \u2022 Coolant Temperature \u2022 Vehicle Speed \u2022 DPF upstream and downstream temperature readings AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 5 - w w w . a X t r . i n C o n f i d e n t i a l 3. Save or photograph the freeze frame for reference during further diagnosis.",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 3,
+      "question": "no looseness or signs of blowout \u2022 Check for soot or moisture deposits inside hose ends (indicates leaks) 5. Inspect the sensor electrical connector: 1. Check for pushed-back, bent, or corroded pins 2. Check for water ingress or mud inside the connector housing 3. Confirm the connector locking tab is fully engaged (audible click) 6. Inspect the sensor body: Expected Result Freeze frame data should show sensor voltage reading below 0.249 V confirming the fault trigger condition. AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 6 - w w w . a X t r . i n C o n f i d e n t i a l \u2022 Look for physical damage, cracks, or impact marks \u2022 Verify the sensor is mounted securely (no looseness) 7. Inspect the wiring harness from the sensor back to the ECU connector: \u2022 Look for chafing against sharp edges, exhaust heat shields, or moving parts \u2022 Check for any pinched or crushed sections Expected Result No visible damage, disconnections, hose leaks, or wiring faults found. If Fault Found Repair damaged wiring, replace connector, or reseat loose hoses as required before continuing.",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Perform Visual Inspection of the DPF Differential Pressure Sensor & Wiring 1. Turn the ignition to OFF and wait 2 minutes for the system to de-energize. 2. The Diesel Particulate Filter (DPF) assembly is part of the vehicle\u2019s exhaust after-treatment system. It is installed along the exhaust pipe and is responsible for trapping soot particles produced during diesel combustion. 3. Where the DPF Assembly Is Located? \u2022 The DPF assembly is typically installed in the exhaust line underneath the vehicle. \u2022 It is positioned: \u2022 Downstream Of the Turbocharger and Diesel Oxidation Catalyst (DOC) \u2022 Before The Muffler and Tailpipe \u2022 Usually Below the Engine or Slightly Toward the Middle of the Vehicle Chassis \u2022 When Looking Under the Vehicle, The DPF Assembly Appears as A Large Metal Cylindrical or Box-Shaped Chamber Integrated into The Exhaust Pipe. It Is Larger Than a Normal Exhaust Pipe Section and May Have Temperature Sensors, Pressure Ports, And Wiring Connectors Attached to It. 4. Inspect both pressure hoses connected to the sensor: \u2022 Check for cracks, splits or collapsed sections \u2022 Ensure hoses are firmly seated on their fittings \u2014 no looseness or signs of blowout \u2022 Check for soot or moisture deposits inside hose ends (indicates leaks) 5. Inspect the sensor electrical connector: 1. Check for pushed-back, bent, or corroded pins 2. Check for water ingress or mud inside the connector housing 3. Confirm the connector locking tab is fully engaged (audible click) 6. Inspect the sensor body: Expected Result Freeze frame data should show sensor voltage reading below 0.249 V confirming the fault trigger condition. AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 6 - w w w . a X t r . i n C o n f i d e n t i a l \u2022 Look for physical damage, cracks, or impact marks \u2022 Verify the sensor is mounted securely (no looseness) 7. Inspect the wiring harness from the sensor back to the ECU connector: \u2022 Look for chafing against sharp edges, exhaust heat shields, or moving parts \u2022 Check for any pinched or crushed sections Expected Result No visible damage, disconnections, hose leaks, or wiring faults found. If Fault Found Repair damaged wiring, replace connector, or reseat loose hoses as required before continuing.",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 4,
+      "question": "DO NOT disconnect it for this test. Use a back-probe or a breakout harness. 4. Identify sensor connector pin functions (refer to the vehicle-specific wiring diagram): \u2022 Pin A: Signal wire (0.249 V \u2013 4.75 V nominal range) \u2022 Pin B: Sensor ground \u2022 Pin C: 5V reference supply from ECU 5. Probe Pin C (5V reference) against a known chassis ground. 6. Record the voltage reading. Expected Result Voltage should read 4.75 V \u2013 5.25 V (5V \u00b1 5%). If reading is 0 V or less than 4.5 V, proceed to",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Check Sensor Supply Voltage WARNING: Ensure the area around the DPF and exhaust is cool before working near the sensor. Risk of burns. 1. Set the Digital Multimeter (DMM) to DC Voltage mode. 2. Turn the ignition to the ON position (engine OFF). 3. Locate the sensor connector \u2014 DO NOT disconnect it for this test. Use a back-probe or a breakout harness. 4. Identify sensor connector pin functions (refer to the vehicle-specific wiring diagram): \u2022 Pin A: Signal wire (0.249 V \u2013 4.75 V nominal range) \u2022 Pin B: Sensor ground \u2022 Pin C: 5V reference supply from ECU 5. Probe Pin C (5V reference) against a known chassis ground. 6. Record the voltage reading. Expected Result Voltage should read 4.75 V \u2013 5.25 V (5V \u00b1 5%). If reading is 0 V or less than 4.5 V, proceed to",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 5,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Check Sensor Ground Circuit 1. With ignition ON, probe Pin B (sensor ground) against battery negative. 2. Record the voltage reading. Expected Result Voltage should read 0 V \u2013 0.1 V (near zero). A reading above 0.5 V indicates a high resistance ground fault. If Ground Fault Found Inspect the ground path from the sensor connector back to the ECU ground point and vehicle chassis ground. Clean or repair as needed.",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 6,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Check Sensor Signal Wire Continuity 1. Turn the ignition to OFF. 2. Disconnect the sensor electrical connector. 3. Disconnect the ECU connector at the ECU end (refer to workshop manual for ECU connector location and pin assignment for the DPF pressure sensor signal wire). 4. Set DMM to Resistance (\u03a9) mode. 5. Probe between the signal pin at the sensor connector and the corresponding pin at the ECU connector. 6. Record the resistance value. Expected Result Resistance should be less than 2 \u03a9. A reading above 2 \u03a9 indicates a break or high-resistance fault in the signal wire. If Open Circuit Repair or replace the signal wire between the sensor and ECU. Clear codes and retest after repair.",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 7,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Check for Short to Ground on Signal Wire 1. With sensor connector and ECU connector still disconnected (from",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 8,
+      "question": "do not use aftermarket substitutes for emissions-critical sensors. 6. Reconnect and firmly seat both pressure hoses. 7. Reconnect the electrical connector (confirm locking tab clicks). 8. Turn the ignition ON and check scan tool live data to confirm sensor signal voltage is within 0.249 V \u2013 4.75 V range. Expected Result Sensor signal voltage reads within specification. No active fault codes for P245E-11.",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Replace DPF Differential Pressure Sensor (if wiring is confirmed good) 1. Ensure the ignition is OFF and the exhaust system is fully cooled. 2. Label and disconnect both pressure hoses from the faulty sensor. 3. Disconnect the sensor electrical connector. 4. Remove the sensor mounting fastener(s) and remove the sensor. 5. Install the new OEM DPF differential pressure sensor \u2014 do not use aftermarket substitutes for emissions-critical sensors. 6. Reconnect and firmly seat both pressure hoses. 7. Reconnect the electrical connector (confirm locking tab clicks). 8. Turn the ignition ON and check scan tool live data to confirm sensor signal voltage is within 0.249 V \u2013 4.75 V range. Expected Result Sensor signal voltage reads within specification. No active fault codes for P245E-11.",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 9,
+      "question": "sensor signal out of range (high) Impact ECU receives a sensor signal outside the calibrated voltage range (>4.75 V). This prevents accurate exhaust pressure measurement and may interrupt DPF regeneration control.",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Clear Fault Codes and Verify Repair 1. On the scan tool, navigate to: Clear / Erase Diagnostic Trouble Codes. 2. Clear all stored DTCs. 3. Re-read DTCs after the test cycle & ensure Error Code P245E-11 / FC1881 is absent Expected Result P245E-11 / FC1881 does not return. If the fault returns, re-inspect all wiring and connections or escalate to ECU diagnostics. AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 9 - w w w . a X t r . i n C o n f i d e n t i a l 2. P2452-12 / FC3133 Fault Description DPF differential pressure sensor signal voltage is more than 4.75 V Fault Type Estimation Wrong \u2014 sensor signal out of range (high) Impact ECU receives a sensor signal outside the calibrated voltage range (>4.75 V). This prevents accurate exhaust pressure measurement and may interrupt DPF regeneration control.",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 10,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Connect the Diagnostic Scan Tool & confirm Active Code 1. Turn the ignition switch to the OFF position. 2. Locate the OBD-II Diagnostic Port, as per the model of the vehicle 3. Firmly plug the diagnostic scan tool connector into the OBD-II port. 4. Turn the ignition key to the ON position (engine must remain OFF). 5. Power on the diagnostic scan tool. 6. Open the Diagnostic App in the Tab & establish connection to the vehicle. 7. Once the connection is established between the VCI and the Diagnostic App, Start the Diagnosis Expected Result Scan tool displays stored fault codes including P2452-12 / FC3133 as active or inactive Next Action If the Primary Error Code is active, proceed with the Step-2. If not, ignore & proceed the diagnosis with the next Primary Error Code",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 11,
+      "question": "Confirm Over-Voltage Condition 1. On the scan tool, navigate to: Live Data / Data Stream. 2. Select and monitor the DPF Differential Pressure Sensor Voltage parameter. 3. With ignition ON and engine OFF, observe the voltage reading. 4. Record the live sensor voltage value. AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 10 - w w w . a X t r . i n C o n f i d e n t i a l Expected Result Sensor voltage should be reading above 4.75 V confirming the fault condition. A voltage above 4.75 V typically indicates: short to battery positive on signal wire, internal sensor fault, or a blocked/disconnected pressure hose causing pressure overshoot.",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Read Live Sensor Data \u2014 Confirm Over-Voltage Condition 1. On the scan tool, navigate to: Live Data / Data Stream. 2. Select and monitor the DPF Differential Pressure Sensor Voltage parameter. 3. With ignition ON and engine OFF, observe the voltage reading. 4. Record the live sensor voltage value. AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 10 - w w w . a X t r . i n C o n f i d e n t i a l Expected Result Sensor voltage should be reading above 4.75 V confirming the fault condition. A voltage above 4.75 V typically indicates: short to battery positive on signal wire, internal sensor fault, or a blocked/disconnected pressure hose causing pressure overshoot.",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 12,
+      "question": "a disconnected upstream hose or a blocked downstream hose can force the sensor into an over-pressure, over-voltage state. 9. Carefully disconnect each hose and visually check the internal bore for soot blockage. 10. Use a thin wire probe or compressed air (low pressure, max 2 bar) to check for free airflow through each hose. 11. Reconnect all hoses firmly. Expected Result Both hoses are free from blockage, properly connected, and undamaged. If Hose Blockage Found Clear the blockage with compressed air. If the hose bore is damaged or cannot be cleared, replace the hose. Clear codes and retest. AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 11 - w w w . a X t r . i n C o n f i d e n t i a l",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Inspect Pressure Hoses for Blockage or Disconnection 1. Turn the ignition OFF. Allow the exhaust and DPF to cool completely before touching. 2. Locate both pressure hoses on the DPF differential pressure sensor: 3. The pressure hoses for the DPF Differential Pressure Sensor are located in the engine compartment and are attached directly to the sensor body through two small hose ports. 4. To find them, open the hood and locate the DPF differential pressure sensor mounted on a bracket near the firewall or close to the exhaust system. 5. From the sensor, two thin rubber or silicone hoses extend downward toward the exhaust system. 6. One hose connects to a pressure tap on the exhaust pipe before the Diesel Particulate Filter (upstream/high-pressure side), while the other connects to a pressure tap after the DPF (downstream/low-pressure side). 7. These hoses allow the sensor to measure the pressure difference across the DPF to determine soot accumulation. 8. Check whether either hose has become disconnected or splits \u2014 a disconnected upstream hose or a blocked downstream hose can force the sensor into an over-pressure, over-voltage state. 9. Carefully disconnect each hose and visually check the internal bore for soot blockage. 10. Use a thin wire probe or compressed air (low pressure, max 2 bar) to check for free airflow through each hose. 11. Reconnect all hoses firmly. Expected Result Both hoses are free from blockage, properly connected, and undamaged. If Hose Blockage Found Clear the blockage with compressed air. If the hose bore is damaged or cannot be cleared, replace the hose. Clear codes and retest. AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 11 - w w w . a X t r . i n C o n f i d e n t i a l",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 13,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Check for Short to Battery (B+) on Signal Wire 1. Turn the ignition OFF. 2. Disconnect the DPF differential pressure sensor electrical connector. 3. Disconnect the relevant ECU connector pin for the sensor signal wire. 4. Set the DMM to DC Voltage mode. 5. Turn the ignition to ON. 6. Probe the signal wire (at the sensor connector side) against chassis ground. 7. Record the voltage. Expected Result Voltage should read 0 V with sensor and ECU disconnected. A reading of battery voltage (12 V \u2013 14 V) confirms a hard short to B+ on the signal wire. If Short to B+ Found Trace the signal wire harness for contact with battery positive supply wires or a chafed section touching a live circuit. Repair insulation or replace the wire segment. Clear codes and retest.",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 14,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Replace DPF Differential Pressure Sensor if All Wiring Checks Pass 1. If supply voltage, ground, signal wire, and hose checks are all within specification, the sensor itself has an internal fault causing high voltage output. 2. Turn ignition OFF. Allow exhaust to cool. 3. Disconnect both pressure hoses and the electrical connector from the sensor. 4. Remove and replace the sensor with a new OEM part. 5. Reconnect hoses and connector. Confirm no air leaks at hose connections. 6. Turn ignition ON. Verify live sensor voltage is now within 0.249 V \u2013 4.75 V. Expected Result Sensor voltage reads within specification. P2452-12 / FC3133 no longer active. AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 12 - w w w . a X t r . i n C o n f i d e n t i a l",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 15,
+      "question": "pressure sensor does not read zero (atmospheric reference) at rest Impact ECU baseline reference is offset \u2192 all subsequent soot load calculations skewed \u2192 P2452 diagnosis unreliable",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Clear Fault Codes and Verify Repair 1. Clear all DTCs via the scan tool. 2. Perform the required DPF diagnostic drive cycle. 3. Re-read DTCs after the test cycle & ensure Error Code P2452-12 / FC3133 is absent Expected Result P2452-12 / FC3133 does not re-trigger. Proceed to diagnose remaining pre-check codes. 3. P245E-1F / FC1883 Fault Description DPF differential pressure value is greater than 1.5 kPa at Key ON or Key OFF condition (engine not running) Fault Type Estimation Wrong \u2014 pressure sensor does not read zero (atmospheric reference) at rest Impact ECU baseline reference is offset \u2192 all subsequent soot load calculations skewed \u2192 P2452 diagnosis unreliable",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 16,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Connect the Diagnostic Scan Tool and Confirm Active Fault Code 1. Turn the ignition switch to the OFF position. 2. Locate the OBD-II Diagnostic Port, as per the model of the vehicle 3. Firmly plug the diagnostic scan tool connector into the OBD-II port. 4. Turn the ignition key to the ON position (engine must remain OFF). 5. Power on the diagnostic scan tool. 6. Open the Diagnostic App in the Tab & establish connection to the vehicle. 7. Once the connection is established between the VCI and the Diagnostic App, Start the Diagnosis Client Note: The 1.5 kPa threshold is based on the client-provided diagnostic specification. AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 13 - w w w . a X t r . i n C o n f i d e n t i a l Expected Result Scan tool displays stored fault codes including P245E-1F / FC1883 as active or inactive Next Action If the Primary Error Code is active, proceed with the Step-2. If not, ignore & proceed the diagnosis with the next Primary Error Code If the value is greater than 1.5 kPa, the fault condition described by the client specification is confirmed.",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 17,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Inspect Pressure Hoses Connected to the Sensor 1. Turn the ignition OFF and allow the exhaust system to cool. 2. Locate the DPF Differential Pressure Sensor in the engine compartment. 3. Identify the two pressure hoses attached to the sensor ports. 4. Inspect both hoses for: \u25aa soot buildup or blockage \u25aa cracks or physical damage \u25aa loose or disconnected hose fittings \u25aa kinks restricting airflow 5. If necessary, remove the hoses and inspect them internally for soot accumulation. Expected Result Pressure reading drops to below 1.5 kPa at key ON after clearing hose blockages. If Blockage Was Found and Cleared Clear fault codes, retest, and verify P245E-1F does not return.",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 18,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Inspect Sensor Wiring 1. Inspect the electrical connector attached to the DPF differential pressure sensor. 2. Check the wiring harness for: \u25aa damaged insulation \u25aa loose connectors \u25aa corroded terminals \u25aa broken wires AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 14 - w w w . a X t r . i n C o n f i d e n t i a l Expected Result Wiring and connectors should be intact and securely connected.",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 19,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Replace the DPF Differential Pressure Sensor (If Required) If hoses and wiring are functioning correctly but the fault persists, the sensor itself may be faulty. 1. Turn ignition OFF and allow the exhaust system to cool. 2. Disconnect the electrical connector from the sensor. 3. Remove the pressure hoses connected to the sensor. 4. Remove the sensor from its mounting bracket. 5. Install a new OEM DPF differential pressure sensor. 6. Reconnect hoses and the electrical connector securely. Expected Result After replacement, the pressure reading should return to a normal value when the engine is not running.",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 20,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Clear Fault Codes and Verify 1. Use the scan tool to clear stored diagnostic trouble codes. 2. Turn the ignition OFF and then ON again. 3. Re-read DTCs after the test cycle & ensure Error Code P245E-1F / FC1883 is absent Expected Result The diagnostic trouble code should not reappear if the issue has been resolved. i. Items That May Require Client/OEM Clarification The following procedures were not confirmed in the referenced public source and may require additional OEM documentation: \u25aa Sensor zero-point calibration or offset reset \u25aa Exact DPF regeneration verification drive cycle \u25aa Manufacturer-specific scan tool functions AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 15 - w w w . a X t r . i n C o n f i d e n t i a l 2.2 Primary Error Codes \u2013 Soot Load Increased 1. P1194 /FC1981 Parameter Description Fault Description P1194 /FC1981- DPF differential pressure sensor signal in range but value is too high. (>9 gpl) Fault Type Soot Load Increased - Engine management / OBDII EATS System",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 21,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Connect the Diagnostic Scan Tool and Confirm Active Fault Code 1. Turn the ignition switch to the OFF position. 2. Locate the OBD-II Diagnostic Port, as per the model of the vehicle 3. Firmly plug the diagnostic scan tool connector into the OBD-II port. 4. Turn the ignition key to the ON position (engine must remain OFF). 5. Power on the diagnostic scan tool. 6. Open the Diagnostic App in the Tab & establish connection to the vehicle. 7. Once the connection is established between the VCI and the Diagnostic App, Start the Diagnosis Expected Result Scan tool displays the stored fault code P1194 /FC1981, as active or inactive Next Action If the Primary Error Code is active, proceed with the Step-2. If not, ignore & proceed the diagnosis with the next Primary Error Code",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 22,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Checking for the additional Primary Codes along with P1194 /FC1981 1. Check also if the Primary Fault Codes: P2459-00/FC 3375, P24A2-00/FC 3376 & P1629- 00/FC2777 are showing active Expected Result The Primary Fault Codes - P2459-00/FC 3375, P24A2-00/FC 3376 & P1629-00/FC2777 are all showing active status. Next Action Proceed the diagnosis as per Step-3 AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 16 - w w w . a X t r . i n C o n f i d e n t i a l",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 23,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Checking the Combined Soot Load value 2. Navigate to the \u201csensor live data\u201d parameter in the Diagnostic Application 3. Select the \u201cCombined soot load estimate\u201d parameter & check the value Expected Result The Combined soot load estimate is showing > 8.5 g/L Next Action Proceed the diagnosis as per Step-4",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 24,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Checking the Rail pressure Sensor Data 1. Under ECU Live data, select Fuel & Check the Rail Pressure Sensor data 2. Check any DPF temperature sensor module related error codes in active condition. 3. Check any HC metering unit related error codes in active condition. Expected Result The Raile Pressure Sensor Data showing - 414- 420 bar Next Action Proceed the diagnosis as per Step-5",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 25,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Check pre-conditions for performing DPF Restriction Test 1. Click on the \u201cDiagnostic Scan\u201d tab in the Diagnostic Application. 2. Navigate to the \u201cActuator Test\u201d under the Engine \u2013 Cummins \u2013 H6 -N4- BSVI. 3. Select \u201cDPF Choking test\u201d 4. Under the \u201cPrecondition Tab, check & confirm all the pre-conditions are met. 5. Refer the SOP below to perform the DPF Restriction Test DPF Restriction Test SOP: Purpose: This test has to be done, if below error codes are found ACTIVE in the system: \u2022 P2459-00 \u2013 Frequent Regeneration \u2022 P24A2-00 \u2013 Combined soot load not reducing after completion of active regeneration \u2022 P1629-00/FC2777 - Regen inhibit switch ON for longer Duration. AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 17 - w w w . a X t r . i n C o n f i d e n t i a l To identify whether DPF requires cleaning. \u2022 If combined soot load is around 4.5 gpl and more, even after completion of REGEN. This indicates accumulation of ash. This test enables verifying this. \u2022 During this test, Delta pressure sensor will be monitored. If any issue is there, appropriate error code will be triggered in the system What happens during the test? \u2022 Engine RPM will be raised to 2000 rpm. \u2022 Delta pressure values will be monitored. \u2022 Test will run for 3-4 minutes. \u2022 At the end of the test, engine will come back to idle rpm & result; Pass/Fail will be displayed. Pre-conditions: \u2022 Restriction test will be initiated within ONE HOUR of completing stationary REGEN. \u2022 Active error codes that have RPM limitations & Delta P sensor/Temperature sensor related should not present in the system. \u2022 Engine operating status should not be in REGEN mode. \u2022 Engine coolant temperature should be above 60 degree centigrade. \u2022 Clutch switch not pressed. \u2022 Brake switch not active \u2022 Parking brake switch status should be active. \u2022 PTO status switch NOT active. \u2022 Accelerator pedal NOT pressed. \u2022 Gear should be in NEUTRAL. \u2022 Engine running in IDLE. SOP: \u2022 Ensure pre- conditions are met. \u2022 Go to vehicle>> ACU>>Cummins>>Actuators>>AFT DPF restriction test (DPF choking test) \u2022 Select \u201cRestriction Test\u201d before replacement of DPF or after. \u2022 Double click on \u201cSTOP\u201d and press the drop down & select \u201cSTART\u201d. \u2022 Observe the below: \u2022 Engine RPM raises to 2000 rpm. \u2022 This test will run for 3-4 minutes and will stop. Status will indicate the result. AXTR LABS PVT. LTD. CIN: U62011TZ2025PTC035643 18 - w w w . a X t r . i n C o n f i d e n t i a l \u2022 The test will abort if the accelerator pedal or service brake is depressed at any time. Test status/Result: \u2022 If any of the pre-conditions are not met either at the time of initiating the test or during the test, those deviations will be displayed in Connectall and test will abort. \u2022 Test status \u201cPASS/FAIL\u201d will be displayed. \u2022 If FAIL: Replace DPF/Clean the DPF only in the AL recommended cleaning centres. In case any new error occurs related to Delta/ Temperature sensor/RPM limitation errors, rectify and do the actuator test again before replacing DPF. \u2022 IF PASS: No issue with DPF. Check as per DSM for \u201cP249F \u2013 frequent regeneration error.\u201d",
+      "expected_result": null
+    },
+    {
+      "dtc_code": "P2463-00",
+      "step_order": 26,
+      "question": "Perform step",
+      "yes_action": null,
+      "no_action": null,
+      "details": "Performing DPF Restriction Test 1. As per the SOP, ensure & adhere to check all the pre- conditions 2. Perform the DPF Restriction Test and ensure the test has passed. 3. Re-read DTCs after the test cycle & ensure Error Codes P1194 /FC1981, P2459-00/FC 3375, P24A2-00/FC 3376 & P1629-00/FC2777 are absent",
+      "expected_result": null
+    }
+  ],
+  "repair_action": []
+}

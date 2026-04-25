@@ -107,6 +107,7 @@ def submit_answer(body: SessionAnswerRequest):
         { "session_id": "uuid", "answer": "YES" }
     """
     result = advance_session(body.session_id, body.answer)
+    
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return result

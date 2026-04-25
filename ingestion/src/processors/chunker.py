@@ -1,83 +1,74 @@
 from __future__ import annotations
+import uuid
 
 
 def build_chunks(parsed: dict) -> list[dict]:
+    dtc_code  = parsed["dtc_code"]
+    system    = parsed.get("system", "")
+    desc      = parsed.get("description", "")
+    reactions = parsed.get("reactions", "")
+    source    = parsed.get("source_document", "")
+    related   = parsed.get("related_codes", [])
 
-    dtc_code   = parsed["dtc_code"]
-    system     = parsed.get("system", "")
-    desc       = parsed.get("description", "")
-    reactions  = parsed.get("reactions", "")
-    source     = parsed.get("source_document", "")
-    related    = parsed.get("related_codes", [])
+    chunks = []
 
-    chunks: list[dict] = []
-
-    # ── 1. DTC Explanation chunk ──────────────────────────────────────────
-    explanation_parts = [f"DTC {dtc_code}: {desc}"]
+    # ── Parent chunk — full DTC context ──────────────────────────────
+    parent_text = f"DTC {dtc_code}: {desc}"
     if reactions:
-        explanation_parts.append(f"System reactions: {reactions}")
+        parent_text += f"\nSystem reactions: {reactions}"
     if related:
-        explanation_parts.append(f"Related codes: {', '.join(related)}")
+        parent_text += f"\nRelated codes: {', '.join(related)}"
+    for cause in parsed.get("causes", []):
+        parent_text += f"\nPossible cause: {cause['cause']}"
 
-    chunks.append(_make_chunk(
-        text="\n".join(explanation_parts),
+    parent_chunk = _make_chunk(
+        text=parent_text,
         category="dtc_explanation",
         dtc_code=dtc_code,
         system=system,
         source=source,
         related=related,
-    ))
+        parent_id=None,
+        chunk_level="parent",
+    )
+    chunks.append(parent_chunk)
+    parent_id = parent_chunk["chunk_id"]
 
-    # ── 2. Possible cause chunks ──────────────────────────────────────────
-    for cause in parsed.get("causes", []):
-        parts = [
-            f"DTC {dtc_code} — Possible cause: {cause['cause']}",
-        ]
-        if cause.get("check_point"):
-            parts.append(f"Diagnostic check: {cause['check_point']}")
-
-        chunks.append(_make_chunk(
-            text="\n".join(parts),
-            category="possible_cause",
-            dtc_code=dtc_code,
-            system=system,
-            source=source,
-            related=related,
-        ))
-
-    # ── 3. Diagnostic step chunks ─────────────────────────────────────────
+    # ── Child chunks — diagnostic steps ──────────────────────────────
     for step in parsed.get("diagnostic_steps", []):
-        parts = [
-            f"DTC {dtc_code} — Diagnostic step {step['step_order']}:",
-            f"Check: {step['question']}",
-        ]
-        if step.get("yes_action"):
-            parts.append(f"If YES (pass): {step['yes_action']}")
-        if step.get("no_action"):
-            parts.append(f"If NO (fail): {step['no_action']}")
-
+        child_text = (
+            f"DTC {dtc_code} — {desc}\n"
+            f"Diagnostic step {step['step_order']}: {step['question']}\n"
+            f"If YES: {step.get('yes_action', '')}\n"
+            f"If NO: {step.get('no_action', '')}"
+        )
         chunks.append(_make_chunk(
-            text="\n".join(parts),
+            text=child_text,
             category="diagnostic_step",
             dtc_code=dtc_code,
             system=system,
             source=source,
             related=related,
+            parent_id=parent_id,
+            chunk_level="child",
         ))
 
-    # ── 4. Repair action chunks ───────────────────────────────────────────
+    # ── Child chunks — repair actions ─────────────────────────────────
     for repair in parsed.get("repair_actions", []):
-        parts = [f"DTC {dtc_code} — Repair action: {repair['repair']}"]
-        if repair.get("cause_ref"):
-            parts.append(f"Addresses cause: {repair['cause_ref']}")
-
+        child_text = (
+            f"DTC {dtc_code} — {desc}\n"
+            f"Repair action: {repair['repair']}\n"
+            f"Addresses cause: {repair.get('cause_ref', '')}"
+        )
         chunks.append(_make_chunk(
-            text="\n".join(parts),
+            text=child_text,
             category="repair_action",
             dtc_code=dtc_code,
             system=system,
             source=source,
             related=related,
+            parent_id=parent_id,
+            chunk_level="child",
         ))
 
     return chunks
@@ -92,8 +83,11 @@ def _make_chunk(
     system: str,
     source: str,
     related: list[str],
+    parent_id: str | None,
+    chunk_level: str,
 ) -> dict:
     return {
+        "chunk_id":        str(uuid.uuid4()),
         "chunk_text":      text.strip(),
         "category":        category,
         "dtc_code":        dtc_code,
@@ -101,6 +95,8 @@ def _make_chunk(
         "component":       _system_to_component(system),
         "source_document": source,
         "related_codes":   related,
+        "parent_id":       parent_id or "",
+        "chunk_level":     chunk_level,
     }
 
 

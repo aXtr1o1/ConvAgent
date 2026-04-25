@@ -6,11 +6,11 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 
 from ingestion.src.scheduler.pipeline import run_full_pipeline
-
+from config import ingest_folder
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-INGEST_FOLDER = Path(os.getenv("INGEST_FOLDER", "./knowledge_base"))
+INGEST_FOLDER = Path(ingest_folder)
 
 
 @router.post("/ingest/all")

@@ -3,7 +3,7 @@ import os
 import uuid
 import logging
 import time
-
+from config import azure_emb_key, azure_emb_endpoint, azure_emb_version, azure_emb_deployment, milvus_host, milvus_port
 from openai import AzureOpenAI
 from dotenv import load_dotenv
 from pymilvus import (
@@ -16,17 +16,16 @@ logger = logging.getLogger(__name__)
 
 # ── Azure OpenAI embedding client ─────────────────────────────────────────────
 _embed_client = AzureOpenAI(
-    api_key=os.getenv("AZURE_OPENAI_KEY"),
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    api_version=os.getenv("AZURE_OPENAI_VERSION"),
+    api_key=azure_emb_key,
+    azure_endpoint=azure_emb_endpoint,
+    api_version=azure_emb_version,
 )
-EMBED_MODEL = os.getenv("AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-ada-002")
+EMBED_MODEL = azure_emb_deployment
 EMBED_DIM   = 1536
 
 # ── Milvus settings ───────────────────────────────────────────────────────────
-MILVUS_HOST  = os.getenv("MILVUS_HOST", "localhost")
-MILVUS_PORT  = int(os.getenv("MILVUS_PORT", "19530"))
-MILVUS_TOKEN = os.getenv("MILVUS_TOKEN", "")
+MILVUS_HOST  = milvus_host
+MILVUS_PORT  = milvus_port
 
 # ── Collection routing ────────────────────────────────────────────────────────
 CATEGORY_TO_COLLECTION = {
@@ -72,6 +71,8 @@ def _create_collection(name: str) -> Collection:
         FieldSchema("source_document", DataType.VARCHAR, max_length=256),
         FieldSchema("category",        DataType.VARCHAR, max_length=64),
         FieldSchema("chunk_text",      DataType.VARCHAR, max_length=4096),
+        FieldSchema("parent_id",       DataType.VARCHAR, max_length=64),
+        FieldSchema("chunk_level",     DataType.VARCHAR, max_length=16), 
         FieldSchema("embedding",       DataType.FLOAT_VECTOR, dim=EMBED_DIM),
     ]
     schema = CollectionSchema(fields, description=f"DTC knowledge — {name}")
@@ -170,7 +171,9 @@ def _insert_records(
         [c["component"]           for c in chunks],   # component
         [c["source_document"]     for c in chunks],   # source_document
         [c["category"]            for c in chunks],   # category
-        [c["chunk_text"][:4096]   for c in chunks],   # chunk_text
+        [c["chunk_text"][:4096]   for c in chunks], 
+        [c.get("parent_id", "")   for c in chunks],    # parent_id
+        [c.get("chunk_level", "") for c in chunks],    # chunk_level
         embeddings,                                    # embedding
     ]
     col.insert(data)

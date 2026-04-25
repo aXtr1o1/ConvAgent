@@ -7,6 +7,7 @@
 /* Hide scrollbar on every page (keep scroll behavior) */
 html,
 body {
+  font-family: "Changa One", cursive;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -946,11 +947,6 @@ body::-webkit-scrollbar {
 }
 
 /* Chat page: background always full width (static); only the side panel slides in/out */
-.chat-page-content {
-  /* no margin – background does not resize */
-
-}
-
 /* ========== Chat page hero + fixed composer (light theme) ========== */
 .chat-page-content {
   position: relative;
@@ -1030,7 +1026,7 @@ body::-webkit-scrollbar {
   font-weight: 300;
   color: var(--login-text-muted, #4a5c52);
   margin-bottom: 0.5rem;
-  font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: inherit;
 } */
 
 
@@ -1062,7 +1058,7 @@ body::-webkit-scrollbar {
   word-break: break-word;
   font-weight: 300;      /* thin serif body text */
   letter-spacing: 0.02em;
-  font-family: "Merriweather", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", serif;
+  font-family: inherit;
 }
 .chat-page-msg-plain {
   margin: 0;
@@ -1072,7 +1068,7 @@ body::-webkit-scrollbar {
   color: #1a231e;
   font-weight: 300;
   letter-spacing: 0.03em; /* slightly more spacing */
-  font-family: "Merriweather", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", serif;
+  font-family: inherit;
 }
 .chat-page-msg-content strong {
   font-weight: 300; /* still very light, just a bit stronger than body */

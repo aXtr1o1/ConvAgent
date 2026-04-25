@@ -2,26 +2,26 @@ from __future__ import annotations
 import os
 import logging
 import time
-
+from config import azure_emb_key, azure_emb_endpoint, azure_emb_version, azure_emb_deployment, milvus_host, milvus_port
 from openai import AzureOpenAI
 from dotenv import load_dotenv
 from pymilvus import connections, Collection, utility
-
 from backend.utils.utilities import db
 
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-# ── Azure OpenAI embedding client ─────────────────────────────────────────────
-_embed_client = AzureOpenAI(
-    api_key=os.getenv("AZURE_OPENAI_KEY"),
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    api_version=os.getenv("AZURE_OPENAI_VERSION"),
-)
-EMBED_MODEL = os.getenv("AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-ada-002")
 
-MILVUS_HOST = os.getenv("MILVUS_HOST", "localhost")
-MILVUS_PORT = int(os.getenv("MILVUS_PORT", "19530"))
+
+_embed_client = AzureOpenAI(
+    api_key=azure_emb_key,
+    azure_endpoint=azure_emb_endpoint,
+    api_version=azure_emb_version,
+)
+EMBED_MODEL = azure_emb_deployment
+
+MILVUS_HOST = milvus_host
+MILVUS_PORT = milvus_port
 
 ALL_COLLECTIONS = [
     "dtc_explanation",
@@ -91,8 +91,15 @@ def semantic_search(query: str, top_k: int = 5) -> list[dict]:
 
     # Sort across all collections by score descending, take top_k overall
     results.sort(key=lambda x: x["score"], reverse=True)
-    return results[:top_k]
+    # ── Deduplicate by chunk_text ─────────────────────────────────────
+    seen_texts: set[str] = set()
+    unique_results = []
+    for r in results:
+        if r["chunk_text"] not in seen_texts:
+            seen_texts.add(r["chunk_text"])
+            unique_results.append(r)
 
+    return unique_results[:top_k]
 
 def format_context_for_llm(chunks: list[dict]) -> str:
     """
@@ -114,8 +121,9 @@ def format_context_for_llm(chunks: list[dict]) -> str:
 def get_decision_tree(dtc_code: str) -> dict:
 
     # Normalise code — accept "P2463" or "P2463-00"
+    print(f"Retrieving decision tree for DTC code: {dtc_code}")
     normalised = _normalise_dtc(dtc_code)
-
+    print(f"Normalised DTC code for retrieval: {normalised}")
     # dtc_codes row
     dtc_resp = (
         db.table("dtc_codes")
@@ -146,14 +154,15 @@ def get_decision_tree(dtc_code: str) -> dict:
         .order("step_order")
         .execute()
     )
-
-    # repair_action rows
-    repairs_resp = (
-        db.table("repair_action")
-        .select("repair, cause_ref")
-        .eq("dtc_code", code)
-        .execute()
-    )
+    print(f"Retrieved {steps_resp.data} diagnostic steps for DTC {code}")
+    print(f"Retrieved {len(steps_resp.data)} diagnostic steps for DTC {code}")
+    # # repair_action rows
+    # repairs_resp = (
+    #     db.table("repair_action")
+    #     .select("repair, cause_ref")
+    #     .eq("dtc_code", code)
+    #     .execute()
+    # )
 
     return {
         "dtc_code":    code,
@@ -162,7 +171,7 @@ def get_decision_tree(dtc_code: str) -> dict:
         "reactions":   row.get("reactions", ""),
         "causes":      causes_resp.data or [],
         "steps":       steps_resp.data or [],
-        "repairs":     repairs_resp.data or [],
+        # "repairs":     repairs_resp.data or [],
     }
 
 

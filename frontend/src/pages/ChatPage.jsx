@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -12,6 +12,7 @@ const bgImage = `${process.env.PUBLIC_URL || ''}/bg-image.avif`;
 
 function ChatPage() {
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
   const location = useLocation();
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
@@ -20,6 +21,7 @@ function ChatPage() {
   );
   const [loading, setLoading] = useState(false);
   const [sendLoading, setSendLoading] = useState(false);
+  const wasSendingRef = useRef(false);
   const { showError: showErrorToast } = useErrorToast();
   const isArchived = location.pathname === '/chat/archived';
   const isLibrary = location.pathname === '/chat/library';
@@ -136,6 +138,14 @@ function ChatPage() {
     }
   };
 
+  // After send completes, focus runs in layout phase so it wins over any conflicting updates.
+  useLayoutEffect(() => {
+    if (wasSendingRef.current && !sendLoading) {
+      inputRef.current?.focus();
+    }
+    wasSendingRef.current = sendLoading;
+  }, [sendLoading]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, sendLoading]);
@@ -215,14 +225,22 @@ function ChatPage() {
       <form className="chat-page-composer" onSubmit={handleSend}>
         <div className="chat-page-composer-inner">
           <input
+            ref={inputRef}
             className="chat-page-input"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Ask Anything..."
             aria-label="Message"
-            disabled={sendLoading}
+            readOnly={sendLoading}
+            aria-busy={sendLoading}
           />
-          <button className="chat-page-send" type="submit" aria-label="Send" disabled={sendLoading}>
+          <button
+            className="chat-page-send"
+            type="submit"
+            aria-label="Send"
+            disabled={sendLoading}
+            onMouseDown={(e) => e.preventDefault()}
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 4l-1.41 1.41L15.17 10H4v2h11.17l-4.58 4.59L12 18l8-8z" />
             </svg>
