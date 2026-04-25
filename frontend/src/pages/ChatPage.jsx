@@ -123,6 +123,8 @@ function ChatPage() {
           new Date(a.updated_at || a.created_at || 0) -
           new Date(b.updated_at || b.created_at || 0)
       );
+      // Ensure the "Thinking" placeholder disappears before we render the real assistant reply.
+      setSendLoading(false);
       setMessages(msgs);
       // Notify sidebar so it can refresh ordering based on updated_at
       if (typeof window !== 'undefined') {
@@ -132,9 +134,8 @@ function ChatPage() {
       }
     } catch (err) {
       showErrorToast(err.message || 'Failed to send message');
-      setMessages((prev) => prev.filter((m) => m.message_id !== optimisticUserMessage.message_id));
-    } finally {
       setSendLoading(false);
+      setMessages((prev) => prev.filter((m) => m.message_id !== optimisticUserMessage.message_id));
     }
   };
 
@@ -164,16 +165,7 @@ function ChatPage() {
       <div className="chat-page-overlay" aria-hidden="true" />
 
       <main className="chat-page-main">
-        {loading ? (
-          <div className="chat-page-loading" role="status" aria-label="Loading">
-            <img
-              src={`${process.env.PUBLIC_URL || ''}/loading-gif.gif`}
-              alt=""
-              className="chat-page-loading-gif"
-              aria-hidden="true"
-            />
-          </div>
-        ) : messages.length > 0 || sendLoading ? (
+        {messages.length > 0 || sendLoading ? (
           <div className="chat-page-messages" role="log" aria-live="polite">
             {messages.map((m) => (
               <article
@@ -211,6 +203,15 @@ function ChatPage() {
               </article>
             )}
             <div ref={messagesEndRef} aria-hidden="true" />
+          </div>
+        ) : loading ? (
+          <div className="chat-page-loading" role="status" aria-label="Loading">
+            <img
+              src={`${process.env.PUBLIC_URL || ''}/loading-gif.gif`}
+              alt=""
+              className="chat-page-loading-gif"
+              aria-hidden="true"
+            />
           </div>
         ) : (
           <div className="chat-page-welcome">

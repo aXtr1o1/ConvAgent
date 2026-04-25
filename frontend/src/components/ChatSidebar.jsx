@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { createConversation, listConversations, deleteConversation } from '../api/conversations';
 import { useErrorToast } from '../context/ErrorToastContext';
@@ -17,6 +17,31 @@ function ChatSidebar({ visible, exiting }) {
   const [loadingConversations, setLoadingConversations] = useState(false);
   const { showError: showErrorToast } = useErrorToast();
   const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+  const refreshSeqRef = useRef(0);
+
+  const refreshConversations = useCallback(async () => {
+    if (!userId) {
+      setConversations([]);
+      return;
+    }
+    const seq = ++refreshSeqRef.current;
+    setLoadingConversations(true);
+    try {
+      const data = await listConversations(userId);
+      if (seq !== refreshSeqRef.current) return;
+      const list = Array.isArray(data.conversations) ? data.conversations : [];
+      list.sort(
+        (a, b) =>
+          new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0)
+      );
+      setConversations(list);
+    } catch (e) {
+      if (seq !== refreshSeqRef.current) return;
+      showErrorToast(e.message || 'Failed to load conversations');
+    } finally {
+      if (seq === refreshSeqRef.current) setLoadingConversations(false);
+    }
+  }, [userId, showErrorToast]);
 
   useEffect(() => {
     if (visible && !exiting) {
@@ -31,60 +56,14 @@ function ChatSidebar({ visible, exiting }) {
   // Always ensure conversations load when we are on /chat
   useEffect(() => {
     if (!isChatView) return;
-    let cancelled = false;
-    async function initialLoad() {
-      setLoadingConversations(true);
-      try {
-        const data = await listConversations(userId);
-        if (!cancelled) {
-          const list = Array.isArray(data.conversations) ? data.conversations : [];
-          list.sort(
-            (a, b) =>
-              new Date(b.updated_at || b.created_at || 0) -
-              new Date(a.updated_at || a.created_at || 0)
-          );
-          setConversations(list);
-        }
-      } catch (e) {
-        if (!cancelled) showErrorToast(e.message || 'Failed to load conversations');
-      } finally {
-        if (!cancelled) setLoadingConversations(false);
-      }
-    }
-    initialLoad();
-    return () => {
-      cancelled = true;
-    };
-  }, [isChatView, userId, showErrorToast]);
+    refreshConversations();
+  }, [isChatView, refreshConversations]);
 
   // Reload when sidebar becomes visible (e.g., after animation)
   useEffect(() => {
     if (!visible || exiting || !isChatView) return;
-    let cancelled = false;
-    async function load() {
-      setLoadingConversations(true);
-      try {
-        const data = await listConversations(userId);
-        if (!cancelled) {
-          const list = Array.isArray(data.conversations) ? data.conversations : [];
-          list.sort(
-            (a, b) =>
-              new Date(b.updated_at || b.created_at || 0) -
-              new Date(a.updated_at || a.created_at || 0)
-          );
-          setConversations(list);
-        }
-      } catch (e) {
-        if (!cancelled) showErrorToast(e.message || 'Failed to load conversations');
-      } finally {
-        if (!cancelled) setLoadingConversations(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [visible, exiting, isChatView, userId, showErrorToast]);
+    refreshConversations();
+  }, [visible, exiting, isChatView, refreshConversations]);
 
   // When a conversation is updated (new message), smoothly move it to the top
   useEffect(() => {
@@ -92,21 +71,43 @@ function ChatSidebar({ visible, exiting }) {
     const handleUpdated = (e) => {
       const id = e.detail?.id;
       if (!id) return;
-      // Reorder locally so the updated conversation moves to the top without reloading
+      // Reorder locally so the updated conversation moves to the top without reloading.
+      // If we don't have it yet (e.g. newly created from ChatPage), refresh from server.
+      let found = false;
       setConversations((prev) => {
         const idx = prev.findIndex((c) => c.conversation_id === id);
+        found = idx !== -1;
         if (idx <= 0) return prev;
         const next = [...prev];
         const [item] = next.splice(idx, 1);
         next.unshift(item);
         return next;
       });
+      if (!found) {
+        refreshConversations();
+      } else {
+        // Also refresh in background so title/updated_at stay in sync with backend.
+        refreshConversations();
+      }
     };
     window.addEventListener('conversation-updated', handleUpdated);
     return () => {
       window.removeEventListener('conversation-updated', handleUpdated);
     };
-  }, [isChatView, userId, showErrorToast]);
+  }, [isChatView, refreshConversations]);
+
+  // If ChatPage creates a conversation (first message), it dispatches active-conversation-changed.
+  // Make sure the sidebar list updates immediately without requiring a reload.
+  useEffect(() => {
+    if (!isChatView) return;
+    const onChanged = (e) => {
+      const id = e.detail?.id ?? null;
+      setActiveConversationId(id);
+      refreshConversations();
+    };
+    window.addEventListener('active-conversation-changed', onChanged);
+    return () => window.removeEventListener('active-conversation-changed', onChanged);
+  }, [isChatView, refreshConversations]);
 
   useEffect(() => {
     if (!notImplemented) return;
@@ -135,14 +136,7 @@ function ChatSidebar({ visible, exiting }) {
           );
         }
       }
-      const data = await listConversations(userId);
-      const list = Array.isArray(data.conversations) ? data.conversations : [];
-      list.sort(
-        (a, b) =>
-          new Date(b.updated_at || b.created_at || 0) -
-          new Date(a.updated_at || a.created_at || 0)
-      );
-      setConversations(list);
+      await refreshConversations();
     } catch (e) {
       showErrorToast(e.message || 'Failed to create conversation');
     }
@@ -170,14 +164,7 @@ function ChatSidebar({ visible, exiting }) {
           );
         }
       }
-      const data = await listConversations(userId);
-      const list = Array.isArray(data.conversations) ? data.conversations : [];
-      list.sort(
-        (a, b) =>
-          new Date(b.updated_at || b.created_at || 0) -
-          new Date(a.updated_at || a.created_at || 0)
-      );
-      setConversations(list);
+      await refreshConversations();
     } catch (err) {
       showErrorToast(err.message || 'Failed to delete');
     }
@@ -257,9 +244,7 @@ function ChatSidebar({ visible, exiting }) {
                   </div>
                 )}
 
-                {loadingConversations ? (
-                  <p className="chat-sidebar-no-conversations">Loading…</p>
-                ) : conversations.length === 0 ? (
+                {conversations.length === 0 ? (
                   <p className="chat-sidebar-no-conversations">No conversations yet</p>
                 ) : (
                   <div className="chat-sidebar-conv-list" role="list">
