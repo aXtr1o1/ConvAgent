@@ -14,7 +14,7 @@ function ChatSidebar({ visible, exiting }) {
   const [activeConversationId, setActiveConversationId] = useState(
     typeof window !== 'undefined' ? localStorage.getItem('active_conversation_id') : null
   );
-  const [loadingConversations, setLoadingConversations] = useState(false);
+ 
   const { showError: showErrorToast } = useErrorToast();
   const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
   const refreshSeqRef = useRef(0);
@@ -25,7 +25,7 @@ function ChatSidebar({ visible, exiting }) {
       return;
     }
     const seq = ++refreshSeqRef.current;
-    setLoadingConversations(true);
+    
     try {
       const data = await listConversations(userId);
       if (seq !== refreshSeqRef.current) return;
@@ -38,8 +38,6 @@ function ChatSidebar({ visible, exiting }) {
     } catch (e) {
       if (seq !== refreshSeqRef.current) return;
       showErrorToast(e.message || 'Failed to load conversations');
-    } finally {
-      if (seq === refreshSeqRef.current) setLoadingConversations(false);
     }
   }, [userId, showErrorToast]);
 
@@ -244,11 +242,7 @@ function ChatSidebar({ visible, exiting }) {
                   </div>
                 )}
 
-                {loadingConversations && (
-                  <div className="chat-sidebar-loading" role="status" aria-live="polite">
-                    Loading conversations…
-                  </div>
-                )}
+                
 
                 {conversations.length === 0 ? (
                   <p className="chat-sidebar-no-conversations">No conversations yet</p>
