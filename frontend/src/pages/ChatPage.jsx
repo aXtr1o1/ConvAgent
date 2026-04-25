@@ -116,7 +116,31 @@ function ChatPage() {
     setMessages((prev) => [...prev, optimisticUserMessage]);
     setSendLoading(true);
     try {
-      const data = await sendMessageApi(conversationId, trimmed);
+      let data = null;
+      try {
+        data = await sendMessageApi(conversationId, trimmed);
+      } catch (err) {
+        // If the active conversation id is stale/deleted on the backend, recover by creating
+        // a new conversation and retrying once.
+        const msg = String(err?.message || '');
+        if (msg.toLowerCase().includes('conversation not found') && userId) {
+          const created = await createConversation(userId);
+          const newId = created?.conversation_id ?? null;
+          if (newId) {
+            conversationId = newId;
+            localStorage.setItem('active_conversation_id', newId);
+            setActiveConversationId(newId);
+            window.dispatchEvent(
+              new CustomEvent('active-conversation-changed', { detail: { id: newId } })
+            );
+            data = await sendMessageApi(newId, trimmed);
+          } else {
+            throw err;
+          }
+        } else {
+          throw err;
+        }
+      }
       const msgs = Array.isArray(data?.messages) ? data.messages : [];
       msgs.sort(
         (a, b) =>
