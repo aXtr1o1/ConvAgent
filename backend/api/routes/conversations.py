@@ -290,9 +290,11 @@ def send_message(conversation_id: str, body: SendMessageRequest):
     }
     history.append(user_entry)
 
+    # Keep only the last few turns to reduce drift/hallucination and
+    # avoid the model anchoring on stale context.
     llm_history = [
         {"role": m["role"], "content": m["content"]}
-        for m in history[:10]
+        for m in history[-5:]
     ]
 
     # ── Check active session ──────────────────────────────────────────────
@@ -422,7 +424,7 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
 
             llm_history = [
                 {"role": m["role"], "content": m["content"]}
-                for m in history
+                for m in history[-5:]
             ]
 
             # ── Check active session ──────────────────────────────────────

@@ -200,4 +200,4 @@ def _embed(text: str) -> list[float]:
 
 def _normalise_dtc(code: str) -> str:
     """Strip suffix so 'P2463' matches 'P2463-00' via ILIKE."""
-    return code.strip().upper().split("-")[0]
+    return code.strip().upper()

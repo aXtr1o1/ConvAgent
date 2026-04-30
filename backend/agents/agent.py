@@ -7,6 +7,57 @@ import re
 from ingestion.retrieval.session_handler import get_active_session_for_conversation
 logger = logging.getLogger(__name__)
 
+VALIDATION_AGENT_PROMPT = """
+You are a STRICT validation agent for an automotive diagnostic decision system.
+
+You will be given:
+1) ACTIVE_DIAGNOSTIC_CONTEXT (may be NONE)
+2) A PROPOSED_DECISION JSON produced by another model
+3) The USER_MESSAGE
+
+Your job:
+- Validate the proposed decision against the ACTIVE_DIAGNOSTIC_CONTEXT.
+- If invalid or unsupported, CORRECT it to a safe decision that will not hallucinate.
+
+IMPORTANT RULES (ACTIVE SESSION ONLY):
+
+If ACTIVE_DIAGNOSTIC_CONTEXT is not NONE:
+
+Allowed intents:
+- "continue_session"
+- "start_session" (ONLY if the NEW dtc_code appears verbatim inside the current step's yes_action or no_action)
+- "cancel"
+
+Allowed go_to_parent:
+- true ONLY if parent_dtc_code exists (non-null / non-empty). In that case dtc_code MUST equal parent_dtc_code.
+
+Commands:
+- If USER_MESSAGE is one of: "/prev", "/repeat", "/parent", "/cancel", or equals "BACK" (case-insensitive),
+  then you MUST set:
+  - command to that value (use "/prev" for BACK)
+  - intent = "continue_session" (or "cancel" for /cancel)
+  - dtc_code = current_dtc_code (or parent_dtc_code for /parent when available)
+  - go_to_parent = true only for /parent with a parent
+
+Start session validation:
+- If proposed intent is "start_session" but proposed dtc_code is missing, invalid, or not found in yes_action/no_action:
+  -> correct to {"intent":"continue_session","dtc_code":current_dtc_code,"go_to_parent":false,"command":""}
+
+If ACTIVE_DIAGNOSTIC_CONTEXT is NONE:
+- Do not overcorrect; return PROPOSED_DECISION as-is if it is valid JSON.
+
+OUTPUT:
+Return ONLY strict JSON with these keys (no extras):
+{
+  "intent": "start_session" | "continue_session" | "cancel",
+  "dtc_code": "string",
+  "go_to_parent": true | false,
+  "command": "/prev" | "/repeat" | "/parent" | "/cancel" | "",
+  "confidence": 0.0-1.0,
+  "reason": "one line"
+}
+"""
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # AGENT 1 — DECISION AGENT
@@ -42,6 +93,12 @@ STEP EXECUTION RULES
 
 1. Interpret USER MESSAGE:
 
+- Navigation commands (HIGHEST PRIORITY; do NOT treat as YES/NO):
+    - "/prev" or "BACK" → Previous step in the SAME DTC/session (not parent)
+    - "/repeat" → Repeat the CURRENT step in the SAME DTC/session
+    - "/parent" → Return to parent DTC/session (ONLY if parent_dtc_code exists)
+    - "/cancel" → Cancel diagnostic session
+
 - "yes", "ok", "done", "checked", "working" → YES
 - "no", "not working", "failed", "issue persists" → NO
 - "cancel", "stop", "exit", "abort" → CANCEL
@@ -50,6 +107,38 @@ STEP EXECUTION RULES
 
 IF YES → follow yes_action  
 IF NO → follow no_action  
+
+NAVIGATION COMMAND EXECUTION (STRICT):
+
+If user message is "/cancel":
+    - intent = "cancel"
+    - dtc_code = current_dtc_code
+    - go_to_parent = false
+    - reason = "command:/cancel"
+
+If user message is "/parent":
+    - If parent_dtc_code exists:
+        - intent = "continue_session"
+        - dtc_code = parent_dtc_code
+        - go_to_parent = true
+        - reason = "command:/parent"
+    - Else (no parent):
+        - intent = "continue_session"
+        - dtc_code = current_dtc_code
+        - go_to_parent = false
+        - reason = "command:/parent(no_parent)"
+
+If user message is "/prev" OR equals "BACK":
+    - intent = "continue_session"
+    - dtc_code = current_dtc_code
+    - go_to_parent = false
+    - reason = "command:/prev"
+
+If user message is "/repeat":
+    - intent = "continue_session"
+    - dtc_code = current_dtc_code
+    - go_to_parent = false
+    - reason = "command:/repeat"
 
 3. CANCEL RULE:
 
@@ -127,16 +216,15 @@ If NO action implies failure AND includes return instruction:
 OUTPUT (MODE 1)
 ────────────────────────
 
-Return STRICT JSON:
+Return STRICT JSON (keep it SIMPLE — no extra keys):
 
 {
-  "route": "diagnostic",
-  "tool": "supabase",
   "intent": "start_session" | "continue_session" | "cancel",
   "dtc_code": "string",
   "go_to_parent": true | false,
-  "confidence": 0.9-1.0,
-  "reason": "forward flow | backtrack | step execution"
+  "command": "/prev" | "/repeat" | "/parent" | "/cancel" | "",
+  "confidence": 0.0-1.0,
+  "reason": "one line"
 }
 
 ────────────────────────────────────────
@@ -251,6 +339,52 @@ def current_step(active_session) -> dict:
         "total_steps": len(steps)
     }
 
+def _run_validation_agent(
+    *,
+    proposed: dict,
+    session_context: dict | None,
+    user_message: str,
+) -> dict:
+    """
+    Validate/correct the decision agent output to reduce hallucinations.
+    """
+    try:
+        messages = [
+            {"role": "system", "content": VALIDATION_AGENT_PROMPT},
+            {"role": "system", "content": f"ACTIVE_DIAGNOSTIC_CONTEXT:\n{session_context}"},
+            {"role": "system", "content": f"PROPOSED_DECISION:\n{json.dumps(proposed)}"},
+            {"role": "user", "content": user_message},
+        ]
+        resp = client.chat.completions.create(
+            model=azure_deployment,
+            messages=messages,
+            temperature=0.0,
+            max_tokens=120,
+            response_format={"type": "json_object"},
+        )
+        raw = resp.choices[0].message.content
+        match = re.search(r"\{.*\}", raw, re.DOTALL)
+        if not match:
+            raise ValueError("validation agent returned non-JSON")
+        validated = json.loads(match.group(0))
+        if isinstance(validated, dict):
+            return validated
+    except Exception as e:
+        logger.error("Validation agent failed: %s", e, exc_info=True)
+
+    # Fallback: safest correction (continue current session)
+    current_dtc = ""
+    if isinstance(session_context, dict):
+        current_dtc = session_context.get("dtc_code", "") or ""
+    return {
+        "intent": "continue_session",
+        "dtc_code": current_dtc,
+        "go_to_parent": False,
+        "command": "",
+        "confidence": 0.5,
+        "reason": "validator_fallback",
+    }
+
 def run_decision_agent(
     message: str,
     has_active_session: bool = False,
@@ -291,6 +425,9 @@ def run_decision_agent(
             print(f"Active session context: {session_context}")
     if conversation_history is None:
         conversation_history = []
+    # Limit history to most recent turns to reduce drift/hallucination.
+    if len(conversation_history) > 5:
+        conversation_history = conversation_history[-5:]
     
     
     print("Active session:", session_context)
@@ -319,7 +456,7 @@ def run_decision_agent(
         response = client.chat.completions.create(
             model=azure_deployment,
             messages=messages,
-            temperature=0.1,
+            temperature=0.0,
             max_tokens=150,
             response_format={"type": "json_object"} 
         )
@@ -343,18 +480,56 @@ def run_decision_agent(
     intent     = decision.get("intent", "qa")
     dtc_code   = decision.get("dtc_code")
     parent_bool = decision.get("go_to_parent", False)
+    command = decision.get("command", "") if isinstance(decision, dict) else ""
+
+    # ── Step 2.5: Validate/correct decisions to reduce hallucinations ─────────
+    if has_active_session:
+        decision = _run_validation_agent(
+            proposed={
+                "intent": intent,
+                "dtc_code": dtc_code or "",
+                "go_to_parent": bool(parent_bool),
+                "command": command or "",
+                "confidence": float(confidence) if isinstance(confidence, (int, float)) else 0.5,
+                "reason": reason,
+            },
+            session_context=session_context,
+            user_message=message,
+        )
+        intent = decision.get("intent", intent)
+        dtc_code = decision.get("dtc_code", dtc_code)
+        parent_bool = decision.get("go_to_parent", parent_bool)
+        command = decision.get("command", command) if isinstance(decision, dict) else command
+        confidence = decision.get("confidence", confidence)
+        reason = decision.get("reason", reason)
+
+        # Final hard guard (non-LLM): prevent hallucinated DTC switches.
+        if intent == "start_session":
+            step_data = (session_context or {}).get("step_data", {}) if isinstance(session_context, dict) else {}
+            yes_action = str(step_data.get("yes_action", "") or "")
+            no_action = str(step_data.get("no_action", "") or "")
+            target = str(dtc_code or "").upper()
+            haystack = f"{yes_action}\n{no_action}".upper()
+            if not target or target not in haystack:
+                intent = "continue_session"
+                dtc_code = (session_context or {}).get("dtc_code", dtc_code) if isinstance(session_context, dict) else dtc_code
+                parent_bool = False
+                reason = "blocked_hallucinated_start_session"
     # ── Step 3: execute the selected tool ────────────────────────────────────
     if has_active_session :
         tool = "supabase"
         route = "diagnostic"
-        if intent == "start_session" and dtc_code:
-            reason = "switching to new DTC during active session"
-        elif intent == "cancel":
-            reason = "user wants to cancel the session"
+        # DB-driven active session rule:
+        # Always continue the active session and let session_handler.advance_session()
+        # decide the next step / DTC jump deterministically from yes_action/no_action.
+        if command == "/cancel" or intent == "cancel":
+            intent = "cancel"
+            reason = "active session — cancel"
         else:
-            intent="continue_session"
-
-            reason = "active session — routing to supabase for session continuity"
+            intent = "continue_session"
+            parent_bool = False
+            dtc_code = session_context.get("dtc_code") if isinstance(session_context, dict) else dtc_code
+            reason = "active session — db-driven advance_session"
     raw_context = ""
     sources     = []
 

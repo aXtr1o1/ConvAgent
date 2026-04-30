@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+import re
 from datetime import datetime, timezone
 
 from backend.utils.utilities import db, openai_client as client
@@ -14,6 +15,8 @@ STATUS_ACTIVE   = "active"
 STATUS_PAUSED   = "paused"
 STATUS_RESOLVED = "resolved"
 STATUS_ESCALATE = "escalate"
+
+_DTC_IN_TEXT = re.compile(r"\b(P[0-9A-Fa-f]{4}(?:-[0-9A-Fa-f]{2})?)\b")
 
 
 # ── LLM Intent Detector ───────────────────────────────────────────────────────
@@ -184,8 +187,74 @@ def _resume_parent_if_any(session: dict) -> dict | None:
         parent_step = int(parent.get("current_step", 0)) if parent else 0
     else:
         parent_step = int(snap)
+    # Ensure parent session resumes at the snapshot step so the next question
+    # matches what the user expects when returning to the parent flow.
+    try:
+        parent_answers = _parse_answers(parent.get("answers", "[]")) if parent else []
+        _update_session(parent_id, parent_step, parent_answers, STATUS_ACTIVE)
+    except Exception as e:
+        logger.error("Failed to set parent current_step on resume: %s", e, exc_info=True)
     parent_dtc = parent.get("dtc_code", "") if parent else ""
     return {"parent_id": parent_id, "parent_dtc": parent_dtc, "parent_step": parent_step}
+
+def _extract_jump_dtc(action_text: str) -> str | None:
+    """
+    Extracts a target DTC code from an action string if it indicates a jump/diagnose.
+    Examples:
+      - "Jump to P245E-1F diagnostic procedure."
+      - "Diagnose P2452-12 ..."
+    """
+    if not action_text:
+        return None
+    t = str(action_text)
+    if "jump to" in t.lower() or "diagnose" in t.lower():
+        m = _DTC_IN_TEXT.search(t)
+        if m:
+            return m.group(1).upper()
+    return None
+
+def _action_returns_to_parent(action_text: str) -> bool:
+    if not action_text:
+        return False
+    tl = str(action_text).lower()
+    return (
+        "return to parent" in tl
+        or "return to main" in tl
+        or "return to main p2463" in tl
+        or "return to main diagnostic flow" in tl
+        or "resume parent" in tl
+    )
+
+def _render_step_message(dtc_code: str, step_idx: int, steps: list[dict]) -> str:
+    q = steps[step_idx].get("question", "") if 0 <= step_idx < len(steps) else ""
+    return (
+        f"**Step {step_idx + 1} of {len(steps)}:** {q}\n\n"
+        "Reply **YES** if the check passes | **NO** if it fails | **CANCEL** to stop."
+    )
+
+
+def _detect_navigation_command(message: str) -> str | None:
+    """
+    Returns one of: 'prev', 'repeat', 'parent', 'cancel' or None.
+    """
+    m = (message or "").strip()
+    if not m:
+        return None
+    ml = m.lower()
+    # Explicit commands
+    if ml in {"/prev", "back"}:
+        return "prev"
+    if ml == "/repeat":
+        return "repeat"
+    if ml == "/parent":
+        return "parent"
+    if ml == "/cancel":
+        return "cancel"
+    # Natural language aliases (avoid misclassification as YES/NO)
+    # Treat "go back previous dtc/code" as parent navigation (NOT previous step).
+    if "previous dtc" in ml or "previous code" in ml or "go back" in ml or "back to previous" in ml:
+        return "parent"
+    return None
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -302,6 +371,111 @@ def advance_session(session_id: str, answer: str) -> dict:
 
     current_step = steps[idx]
 
+    # ── NAVIGATION COMMANDS (deterministic; no LLM) ───────────────────
+    cmd = _detect_navigation_command(answer)
+    if cmd == "cancel":
+        close_session(session_id)
+        try:
+            parent_info = _resume_parent_if_any(session)
+            if parent_info:
+                return {
+                    "message": (
+                        "Diagnostic session cancelled.\n\n"
+                        f"Resuming previous diagnostic session **{parent_info['parent_dtc']}** "
+                        f"(step {parent_info['parent_step'] + 1}).\n\n"
+                        "Reply YES / NO for the previous session’s current step."
+                    ),
+                    "status": STATUS_ACTIVE,
+                    "step_current": parent_info["parent_step"] + 1,
+                    "step_total": len(steps),
+                    "action_taken": "command:/cancel",
+                }
+        except Exception as e:
+            logger.error("Failed to resume parent on /cancel: %s", e, exc_info=True)
+        return {
+            "message": "Diagnostic session cancelled.",
+            "status": STATUS_RESOLVED,
+            "step_current": idx + 1,
+            "step_total": len(steps),
+            "action_taken": "command:/cancel",
+        }
+
+    if cmd == "parent":
+        # Pause current session and resume parent if available.
+        pause_session(session_id)
+        parent_info = _resume_parent_if_any(session)
+        if not parent_info:
+            # No parent to resume; stay on current step.
+            _reactivate_session(session_id)
+            return {
+                "message": (
+                    "No parent diagnostic session is available to resume.\n\n"
+                    f"**Step {idx + 1} of {len(steps)}:** {current_step.get('question', '')}\n\n"
+                    "Reply YES / NO or Cancel"
+                ),
+                "status": STATUS_ACTIVE,
+                "step_current": idx + 1,
+                "step_total": len(steps),
+                "action_taken": "command:/parent(no_parent)",
+            }
+        # Re-render the parent question deterministically from DB/tree to avoid
+        # reply-agent mixing step numbers/question text across sessions.
+        try:
+            ptree = get_decision_tree(parent_info["parent_dtc"])
+            psteps = ptree.get("steps", []) if ptree else []
+            pidx = int(parent_info["parent_step"])
+            if psteps and 0 <= pidx < len(psteps):
+                return {
+                    "message": (
+                        f"Resuming previous diagnostic session **{parent_info['parent_dtc']}**.\n\n"
+                        + _render_step_message(parent_info["parent_dtc"], pidx, psteps)
+                    ),
+                    "status": STATUS_ACTIVE,
+                    "step_current": pidx + 1,
+                    "step_total": len(psteps),
+                    "action_taken": "command:/parent",
+                }
+        except Exception as e:
+            logger.error("Failed to render parent step on /parent: %s", e, exc_info=True)
+        return {
+            "message": (
+                f"Resuming previous diagnostic session **{parent_info['parent_dtc']}** "
+                f"(step {parent_info['parent_step'] + 1}).\n\n"
+                "Reply YES / NO for the previous session’s current step."
+            ),
+            "status": STATUS_ACTIVE,
+            "step_current": parent_info["parent_step"] + 1,
+            "step_total": len(steps),
+            "action_taken": "command:/parent",
+        }
+
+    if cmd == "repeat":
+        return {
+            "message": (
+                f"**Step {idx + 1} of {len(steps)}:** {current_step.get('question', '')}\n\n"
+                "Reply YES / NO or Cancel"
+            ),
+            "status": STATUS_ACTIVE,
+            "step_current": idx + 1,
+            "step_total": len(steps),
+            "action_taken": "command:/repeat",
+        }
+
+    if cmd == "prev":
+        prev_idx = max(idx - 1, 0)
+        prev_step = steps[prev_idx] if steps else {}
+        _update_session(session_id, prev_idx, answers, STATUS_ACTIVE)
+        return {
+            "message": (
+                f"**Step {prev_idx + 1} of {len(steps)}:** {prev_step.get('question', '')}\n\n"
+                "Reply YES / NO or Cancel"
+            ),
+            "status": STATUS_ACTIVE,
+            "step_current": prev_idx + 1,
+            "step_total": len(steps),
+            "action_taken": "command:/prev",
+        }
+
     def _user_means_no(text: str) -> bool:
         t = (text or "").strip().lower()
         if not t:
@@ -406,6 +580,56 @@ def advance_session(session_id: str, answer: str) -> dict:
         action_text = current_step.get("yes_action", "")
     else:
         action_text = current_step.get("no_action", "")
+
+    # ── DB-DRIVEN BRANCHING (NO HALLUCINATION) ─────────────────────────
+    # If the current step explicitly instructs a DTC jump, do it deterministically.
+    jump_dtc = _extract_jump_dtc(action_text)
+    if jump_dtc:
+        # Start the child diagnostic session and pause this one as the parent.
+        convo_id = session.get("conversation_id")
+        if convo_id:
+            result = start_session(str(convo_id), jump_dtc, parent_session_id=session_id)
+            if result and not result.get("error"):
+                pause_session(session_id)
+                return {
+                    "message": result.get("message", f"Starting diagnostic for {jump_dtc}."),
+                    "status": STATUS_ACTIVE,
+                    "step_current": 1,
+                    "step_total": result.get("step_total", 0) or 0,
+                    "action_taken": f"jump_to:{jump_dtc}",
+                }
+        # If starting the child session failed, fall through to normal progression.
+
+    # If the step explicitly says return to parent, do it deterministically.
+    if _action_returns_to_parent(action_text):
+        parent_info = _resume_parent_if_any(session)
+        if parent_info:
+            # Close this child session and render the parent's current step question.
+            close_session(session_id)
+            ptree = get_decision_tree(parent_info["parent_dtc"])
+            psteps = ptree.get("steps", []) if ptree else []
+            pidx = int(parent_info["parent_step"])
+            if psteps and 0 <= pidx < len(psteps):
+                return {
+                    "message": (
+                        f"Returning to **{parent_info['parent_dtc']}**.\n\n"
+                        + _render_step_message(parent_info["parent_dtc"], pidx, psteps)
+                    ),
+                    "status": STATUS_ACTIVE,
+                    "step_current": pidx + 1,
+                    "step_total": len(psteps),
+                    "action_taken": "return_to_parent",
+                }
+            return {
+                "message": (
+                    f"Returning to **{parent_info['parent_dtc']}** (step {parent_info['parent_step'] + 1}).\n\n"
+                    "Reply YES / NO for the previous session’s current step."
+                ),
+                "status": STATUS_ACTIVE,
+                "step_current": parent_info["parent_step"] + 1,
+                "step_total": 0,
+                "action_taken": "return_to_parent",
+            }
 
     next_idx = idx + 1
 
