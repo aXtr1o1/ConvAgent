@@ -267,12 +267,14 @@ Detect patterns:
 Extract EXACT code
 
 Valid DTC codes (ONLY these allowed):
-    P1194
-    P1629-00
-    P2452
-    P2452-12
-    P245E
-    P2463-00
+    P1194-00  - DPF differential pressure sensor signal in range but value too high (> 9 g/L)
+    P1629-00  - Regeneration inhibit switch ON for extended duration
+    P2459-00  - Frequent Regeneration
+    P24A2-00  - Combined soot load not reduced after complete Active Regeneration
+    P2452-12  - DPF differential pressure sensor signal voltage > 4.75 V
+    P245E-11  - DPF differential pressure sensor signal voltage < 0.249 V
+    P245E-1F  - DPF differential pressure value > 1.5 kPa at Key ON or Key OFF (engine not running)
+    P2463-00  - DPF - Soot load - Stage 1 (> 8.5 g/L)
 
 Rules:
 - If close match in conversation → pick highest confidence match
@@ -812,8 +814,9 @@ Do NOT attempt to answer from general knowledge — only use what is provided.
 ALWAYS:
 - Be technically accurate
 - Use only what is provided — do not add information not in the context
-- End every diagnostic step with:
+- For ongoing steps only (another question is pending): end with —
    Reply YES if the check passes |  Reply NO if it fails
+- If the procedure is complete / no YES–NO question remains (final result, resumed parent flow, or prompt to enter another DTC), do NOT add YES/NO lines
 - Keep responses readable on a small screen
 """
 

@@ -32,6 +32,7 @@ export default function MainHeader() {
   const handleSignOut = () => {
     localStorage.removeItem('user_id');
     localStorage.removeItem('username');
+    localStorage.removeItem('active_conversation_id');
     setPopoverOpen(false);
     navigate('/login');
   };

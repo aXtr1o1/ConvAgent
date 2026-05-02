@@ -11,10 +11,12 @@ from config import azure_deployment
 
 logger = logging.getLogger(__name__)
 
-STATUS_ACTIVE   = "active"
-STATUS_PAUSED   = "paused"
-STATUS_RESOLVED = "resolved"
-STATUS_ESCALATE = "escalate"
+STATUS_ACTIVE          = "active"
+STATUS_PAUSED          = "paused"
+STATUS_RESOLVED        = "resolved"
+STATUS_ESCALATE        = "escalate"
+# Root DTC tree finished: not “active” for routing, but distinct from cancel/resolve.
+STATUS_DTC_COMPLETED   = "dtc_completed"
 
 _DTC_IN_TEXT = re.compile(r"\b(P[0-9A-Fa-f]{4}(?:-[0-9A-Fa-f]{2})?)\b")
 
@@ -638,7 +640,15 @@ def advance_session(session_id: str, answer: str) -> dict:
 
     # ── RESOLUTION CONDITION ─────────────────────────────────────────
     if next_idx >= len(steps):
-        status = STATUS_RESOLVED if not is_yes else STATUS_ESCALATE
+        ctx = _parse_decision_context(session.get("decision_context"))
+        has_parent = bool(ctx.get("parent_session_id"))
+        # Child flows that return to a parent keep resolved/escalate for traceability.
+        # Root (no parent): soft end — user can immediately start another DTC in the same chat.
+        status = (
+            (STATUS_RESOLVED if not is_yes else STATUS_ESCALATE)
+            if has_parent
+            else STATUS_DTC_COMPLETED
+        )
 
         message = (
             f"Final Step Result:\n\n"
@@ -656,6 +666,15 @@ def advance_session(session_id: str, answer: str) -> dict:
                     "\n\n"
                     f"Resuming previous diagnostic session **{parent_info['parent_dtc']}** "
                     f"(step {parent_info['parent_step'] + 1})."
+                )
+            elif not has_parent:
+                dtc = (session.get("dtc_code") or "").strip()
+                lead = f"**{dtc}** — " if dtc else ""
+                message += (
+                    "\n\n"
+                    f"{lead}**This guided procedure is complete.** "
+                    "If you want to diagnose another fault, send that DTC code next "
+                    "(for example **P2452-12**)."
                 )
         except Exception as e:
             logger.error("Failed to resume parent after final step: %s", e, exc_info=True)
