@@ -1,231 +1,230 @@
-from __future__ import annotations
+from docx import Document
+from docx.text.paragraph import Paragraph
+from docx.table import Table
+import logging
+from config import azure_deployment
+from backend.utils.utilities import openai_client as client
+from concurrent.futures import ThreadPoolExecutor
+import json
 import re
-from pathlib import Path
 
-try:
-    import pdfplumber
-except ImportError:
-    pdfplumber = None
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-def parse_pdf(filepath: str | Path) -> dict:
-    if pdfplumber is None:
-        raise ImportError("pdfplumber is required: pip install pdfplumber")
 
-    path = Path(filepath)
-    pages = _extract_pages(path)
-    full_text = "\n".join(pages)
+PROMPT = """
+You are a diagnostic document parser.
 
-    dtc_code, description   = _parse_header(full_text)
-    reactions               = _parse_reactions(full_text)
-    causes                  = _parse_causes(full_text)
-    related_codes           = _parse_related_codes(full_text, dtc_code)
-    diagnostic_steps, repair_actions = _parse_steps(full_text, dtc_code, description)
+Convert the given content into structured JSON.
 
-    return {
-        "dtc_code":         dtc_code,
-        "system":           _infer_system(full_text[:500]),
-        "description":      description,
-        "spn":              None,
-        "fmi":              None,
-        "reactions":        reactions,
-        "source_document":  path.name,
-        "causes":           causes,
-        "diagnostic_steps": diagnostic_steps,
-        "repair_actions":   repair_actions,
-        "related_codes":    related_codes,
+{
+  "dtcs": [
+    {
+      "code": "string",
+      "steps": [
+        {
+          "step_number": integer,
+          "title": "string",
+          "instructions": "string",
+          "expected_result": "string",
+          "next_action": "string or object"
+        }
+      ]
     }
+  ]
+}
+Rules:
+- Preserve ALL technical details
+- Extract DTC → Sub-DTC → Steps
+- Each Step must include:
+  - step_number
+  - title
+  - instructions
+  - expected_result
+  - next_action
+- DO NOT summarize
+- DO NOT skip content
+
+Return ONLY JSON.
+"""
+
+def iter_block_items(parent):
+    for child in parent.element.body.iterchildren():
+        if child.tag.endswith('p'):
+            yield Paragraph(child, parent)
+        elif child.tag.endswith('tbl'):
+            yield Table(child, parent)
+        
+
+def parse_docs(filepath):
+    doc = Document(filepath)
+
+    blocks = []
 
 
-# ── Page extractor ────────────────────────────────────────────────────────────
+    for block in iter_block_items(doc):
 
-def _extract_pages(path: Path) -> list[str]:
-    with pdfplumber.open(path) as pdf:
-        return [p.extract_text() or "" for p in pdf.pages]
+        if isinstance(block, Paragraph):
+            text = block.text.strip()
+            if text:
+                blocks.append({
+                    "type":"paragraph",
+                    "content":text,
+                })
+        elif isinstance(block, Table):
+            table_data = []
+            for row in block.rows:
+                row_data = [cell.text.strip() for cell in row.cells]
+                table_data.append(row_data)
+            blocks.append(
+                {
+                    "type":"table",
+                    "content":table_data,
+                }
+            )
+    logger.info(f"Parsed {len(blocks)} blocks from {filepath}")
+    return blocks
 
+def table_to_text(table):
+    lines = []
 
-# ── Header: DTC code + description ───────────────────────────────────────────
+    headers = table[0]
 
-def _parse_header(full_text: str) -> tuple[str, str]:
-    # DTC code e.g. P2463-00
-    code_match = re.search(
-        r'\bDTC\s+(P[0-9A-Fa-f]{4}(?:-[0-9A-Fa-f]{2})?)\b',
-        full_text
-    )
-    if not code_match:
-        code_match = re.search(
-            r'\b(P[0-9A-Fa-f]{4}-[0-9A-Fa-f]{2})\b',
-            full_text
-        )
-    dtc_code = code_match.group(1).upper() if code_match else ""
+    for row in table[1:]:
+        row_text = ", ".join(f"{h} : {v}" for h,v in zip(headers, row))
+        lines.append(row_text)
+    return "\n".join(lines)
 
-    # Description from "DTC Description <text>" line
-    desc_match = re.search(
-        r'DTC Description\s+(.+?)(?:\n|Possible Causes)',
-        full_text,
-        re.IGNORECASE | re.DOTALL
-    )
-    description = ""
-    if desc_match:
-        description = re.sub(r'\s+', ' ', desc_match.group(1)).strip()
+def build_llm_blocks(blocks, max_chars = 3000):
 
-    return dtc_code, description
+    merged = []
+    current = ""
+    current_raw_blocks = []
+    dtc_pattern = re.compile(r"(DTC\s+)?[A-Z]{1,2}\d{3,4}(-\d{2})?")
 
-
-# ── Reactions / Primary Impact ────────────────────────────────────────────────
-
-def _parse_reactions(full_text: str) -> str:
-    match = re.search(
-        r'Primary Impact\s+(.*?)(?=\nIMPORTANT|\n\n[A-Z]|\Z)',
-        full_text,
-        re.IGNORECASE | re.DOTALL
-    )
-    if match:
-        return re.sub(r'\s+', ' ', match.group(1)).strip()
-    return ""
-
-
-# ── Possible causes ───────────────────────────────────────────────────────────
-
-def _parse_causes(full_text: str) -> list[dict]:
-    causes = []
-    match = re.search(
-        r'Possible Causes\s*(.*?)(?=System Category|Primary Impact)',
-        full_text,
-        re.IGNORECASE | re.DOTALL
-    )
-    if not match:
-        return causes
-
-    block = match.group(1)
-    for line in block.splitlines():
-        line = line.strip().lstrip("•").strip()
-        if line and len(line) > 3:
-            causes.append({
-                "cause":       line,
-                "check_point": "",
+    for block in blocks:
+        text = block["content"] if block["type"] == "paragraph" else table_to_text(block["content"])
+        
+        if dtc_pattern.search(text) and len(current) > 0:
+            merged.append({"llm_input":current, "raw_blocks":current_raw_blocks})
+            current = text
+            current_raw_blocks = [text]
+        elif len(current) + len(text) < max_chars:
+            current += "\n" + text
+            current_raw_blocks.append(text)
+        else:
+            merged.append({
+                "llm_input": current.strip(),
+                "raw_blocks": current_raw_blocks.copy()
             })
-    return causes
-
-
-# ── Related DTC codes ─────────────────────────────────────────────────────────
-
-def _parse_related_codes(full_text: str, main_dtc: str) -> list[str]:
-    all_codes = re.findall(
-        r'\b(P[0-9A-Fa-f]{4}(?:-[0-9A-Fa-f]{2})?)\b',
-        full_text,
-        re.IGNORECASE
-    )
-    main_base = main_dtc.split("-")[0].upper()
-    seen = set()
-    related = []
-    for c in all_codes:
-        c = c.upper()
-        base = c.split("-")[0]
-        if base != main_base and c not in seen:
-            seen.add(c)
-            related.append(c)
-    return related
-
-
-# ── Diagnostic steps ──────────────────────────────────────────────────────────
-
-def _parse_steps(
-    full_text: str,
-    dtc_code: str,
-    description: str,
-) -> tuple[list[dict], list[dict]]:
-
-    diagnostic_steps = []
-    repair_actions   = []
-
-    step_pattern = re.compile(
-        r'Step\s+(\d+)\s*[—–-]+\s*([^\n]+)\n'
-        r'(.*?)'
-        r'(?=Step\s+\d+\s*[—–-]|\Z)',
-        re.DOTALL
-    )
-
-    for match in step_pattern.finditer(full_text):
-        step_num   = int(match.group(1))
-        step_title = match.group(2).strip()
-        body       = match.group(3)
-
-        # ── Expected Result ───────────────────────────────────────────
-        expected_match = re.search(
-            r'Expected\s*Result\s+(.*?)(?=Next Action|If Fault|If Voltage|'
-            r'If Ground|If Open|If Short|If Hose|If Blockage|Step\s+\d+|\Z)',
-            body,
-            re.DOTALL | re.IGNORECASE
-        )
-        expected = ""
-        if expected_match:
-            expected = re.sub(r'\s+', ' ', expected_match.group(1)).strip()
-            # Clean page footers from expected text
-            expected = re.sub(
-                r'\d+\s*-\s*www\.\S+\s*(?:AXTR LABS.*?(?=\n|$))?', 
-                '', expected, flags=re.IGNORECASE
-            ).strip()
-
-        # ── Repair / fault action ─────────────────────────────────────
-        # Only capture lines that describe actual repair actions
-        # Skip "Next Action" lines that just say "proceed to Step-X"
-        repair_match = re.search(
-            r'(?:If Fault Found|If Voltage Absent or Low|'
-            r'If Ground Fault Found|If Open Circuit|'
-            r'If Short to Ground Found|If Short to B\+\s*Found|'
-            r'If Hose Blockage Found|If Blockage Was Found and Cleared)'
-            r'\s+(.*?)(?=Step\s+\d+|Expected Result|\Z)',
-            body,
-            re.DOTALL | re.IGNORECASE
-        )
-        repair = ""
-        if repair_match:
-            repair = re.sub(r'\s+', ' ', repair_match.group(1)).strip()
-            # Clean page footers
-            repair = re.sub(
-                r'\d+\s*-\s*www\.\S+.*', 
-                '', repair, flags=re.IGNORECASE
-            ).strip()
-
-        yes_action = expected if expected else "Proceed to next step"
-        no_action  = repair   if repair   else ""
-
-        diagnostic_steps.append({
-            "step_order": step_num,
-            "question":   step_title,
-            "yes_action": yes_action,
-            "no_action":  no_action,
+            current = text
+            current_raw_blocks = [text]
+    if current:
+        merged.append({
+            "llm_input": current.strip(),
+            "raw_blocks": current_raw_blocks.copy()
         })
+    return merged
 
-        # Only add to repair_actions if it's a real repair instruction
-        if repair and len(repair) > 20:
-            repair_actions.append({
-                "repair":    repair,
-                "cause_ref": step_title,
+
+
+def process_block(text):
+    try:
+        res  = client.chat.completions.create(
+            model = azure_deployment,
+            messages = [
+                {
+                    "role": "system",
+                    "content": PROMPT
+                },
+                {
+                    "role": "user",
+                    "content": text
+                }
+            ],
+            response_format = {"type":"json_object"}
+        )
+        return res.choices[0].message.content
+    except Exception as e:
+        logger.error(f"Error processing block: {e}")
+        return "{}"
+
+def process_all(blocks):
+    results = []
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = []
+
+        for b in blocks:
+            future = executor.submit(process_block, b["llm_input"])
+            futures.append((future, b))  # ✅ store tuple manually
+
+        for future, block in futures:
+            results.append({
+                "llm_output": future.result(),
+                "raw_blocks": block["raw_blocks"]
             })
 
-    # Deduplicate by step_order — keep first occurrence
-    seen: set[int] = set()
-    unique_steps = []
-    for s in diagnostic_steps:
-        if s["step_order"] not in seen:
-            seen.add(s["step_order"])
-            unique_steps.append(s)
-
-    return unique_steps, repair_actions
+    return results
+def merge_results(results):
+    dtc_maps = {}
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+    for r in results:
+        try:
+            raw_text = "\n".join(r["raw_blocks"])
+            data = json.loads(r["llm_output"])
+            normalized = normalize_llm_output(data)
 
-def _infer_system(text: str) -> str:
-    text = text.upper()
-    if "DPF" in text:
-        return "DPF"
-    if "EGR" in text:
-        return "EGR"
-    if "FUEL" in text:
-        return "Fuel"
-    if "SCR" in text or "DEF" in text or "UREA" in text:
-        return "SCR"
-    return "Engine"
+            for dtc in normalized:
+                code = dtc["code"]
+                if code not in dtc_maps:
+                    dtc_maps[code] = {
+                        "code":code,
+                        "steps":[]
+                    }
+                dtc_maps[code]["steps"].extend( {
+        **step,
+        "raw_text": raw_text
+    }
+    for step in dtc["steps"] )
+        except Exception as e:
+            logger.error(f"Error processing result: {e}")
+    for dtc in dtc_maps.values():
+        dtc["steps"] = sorted(dtc["steps"], key=lambda x: x["step_number"])
+    return {"dtcs":list(dtc_maps.values())}
+def validate_steps(data):
+    for dtc in data.get("dtcs",[]):
+        if not isinstance(dtc, dict):
+            continue
+        for step in dtc.get("steps",[]):
+            if not step.get("expected_result"):
+                logger.warning(f"Missing expected result in step {step}")
+
+def normalize_llm_output(data):
+    normalized = []
+    dtcs = data.get("dtcs",[])
+
+    for dtc in dtcs:
+        code = dtc.get("code","").strip()
+        if not code or code.lower() in ["string", "dtc-xxxx", "dtcxxx", "dtc1234"]:
+            continue
+        steps = dtc.get("steps",[])
+        clean_steps = []
+        for step in steps:
+            if not step.get("step_number"):
+                continue
+            clean_steps.append({
+                "step_number": step.get("step_number"),
+                "title": step.get("title", "").strip(),
+                "instructions": step.get("instructions", "").strip(),
+                "expected_result": step.get("expected_result", "").strip(),
+                "next_action": step.get("next_action")
+            })
+        if clean_steps:
+            normalized.append({
+                "code":code,
+                "steps":clean_steps
+            })
+    return normalized

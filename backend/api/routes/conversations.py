@@ -5,12 +5,14 @@ from backend.schemas.conversation_schema import CreateConversationRequest, SendM
 from datetime import datetime, timezone
 from backend.agents.casual_llm import generate_title
 from backend.agents.agent import (
-    run_decision_agent,
-    run_casual_agent,
-    run_casual_agent_stream,
-    run_reply_agent,
-    run_reply_agent_stream,
+     dct_code_extraction_agent,
+    dct_code_decision_agent,
+    reply_agent,
+    retrieve_from_milvus,
+    casual_agent
 )
+from pymilvus import Collection
+from ingestion.data.ingestion.retreival import connect_milvus
 import json
 
 import uuid
@@ -264,7 +266,6 @@ def delete_conversation(conversation_id: str):
     return {"success": True}
 
 
-# ── 5. SEND MESSAGE + GET LLM REPLY ──────────────────────────────────────────
 @router.post("/messages/{conversation_id}")
 def send_message(conversation_id: str, body: SendMessageRequest):
     logger.info("Received message for conversation %s: %s", conversation_id, body.message[:100])
@@ -275,7 +276,13 @@ def send_message(conversation_id: str, body: SendMessageRequest):
     
 
     if not res.data:
-        raise HTTPException(status_code=404, detail="Conversation not found.")
+        db.table("conversations").insert({
+            "conversationid": conversation_id,
+            "conversationtitle": generate_title(body.message),
+            "conversationdata": [],
+            "updatedat": now_iso(),
+        }).execute()
+        
 
     row           = res.data[0]
     current_title = row.get("conversationtitle", "New Conversation")
@@ -290,73 +297,149 @@ def send_message(conversation_id: str, body: SendMessageRequest):
     }
     history.append(user_entry)
 
-    # Keep only the last few turns to reduce drift/hallucination and
-    # avoid the model anchoring on stale context.
     llm_history = [
         {"role": m["role"], "content": m["content"]}
         for m in history[-5:]
     ]
 
-    # ── Check active session ──────────────────────────────────────────────
-    active_session = get_active_session_for_conversation(conversation_id)
-    logger.info(
-        "Active session check — conversation_id: %s | found: %s | session: %s",
-        conversation_id,
-        bool(active_session),
-        active_session.get("session_id") if active_session else "None",
-    )
-    # ── AGENT 1: Decision + Tool Call ─────────────────────────────────────
-    decision_result = run_decision_agent(
-        message=body.message,
-        has_active_session=bool(active_session),
-        conversation_history=llm_history,
-        conversation_id=conversation_id,
-        supabase_tool=_make_supabase_tool(conversation_id),
-       
-    )
+    for i in llm_history:
+        print(f"I: {i}")
+        if i.get("priority_list"):
+            prior_list = i.get("priority_list")
+        else:
+            prior_list = {}
+    logger.info(f"Prior List: {prior_list}")
+    extrac_res = dct_code_extraction_agent(
+    conversation_history=llm_history,
+    message=body.message,
+    prior_list=prior_list
+)
+    logger.info(f"Extraction Result: {extrac_res}")
+
+    if extrac_res["status"] != "success":
+        logger.info(f"Extraction Failed: {extrac_res}")
+        assistant_reply = casual_agent(llm_history, body.message)
+        logger.info(f"Casual Agent Reply: {assistant_reply}")
+        sources = []
+        db_used = "none"
+        assistant_entry = {
+        "message_id": str(uuid.uuid4()),
+        "role":       "assistant",
+        "content":    assistant_reply.get("data", {}).get("response", ""),
+        "sources":    sources,
+        "db_used":    db_used,
+        "created_at": now_iso(),
+    }
+        history.append(assistant_entry)
+
+        new_title = current_title
+        if current_title == "New Conversation":
+            new_title = generate_title(body.message)
+
+        db.table("conversations").update({
+            "conversationdata":  history,
+            "conversationtitle": new_title,
+            "updatedat":         now_iso(),
+        }).eq("conversationid", conversation_id).execute()
+
+        logger.info("✅ FINAL RESPONSE GENERATED | db_used=%s", db_used)
+        logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        return {
+            "conversation_id": conversation_id,
+            "messages": [
+                {
+                    "message_id": m.get("message_id", ""),
+                    "role":       m.get("role", ""),
+                    "content":    m.get("content", ""),
+                    "created_at": to_ist(m.get("created_at", "")),
+                    "db_used":    m.get("db_used", ""),
+                    **( {"sources": m.get("sources", [])} if m.get("role") == "assistant" else {} )
+                } for m in history
+            ]
+        }
+
+    else:
+        extracted = extrac_res["data"]
+        logger.info(f"Extracted: {extracted}")
+
+        if not extracted.get("dtc_codes"):
+            assistant_reply = casual_agent(llm_history, body.message)
+            sources = []
+            db_used = "none"
+            
+
+        else:
+           
+            prior_list = {
+                f"dtc{i+1}": dtc
+                for i, dtc in enumerate(extracted["dtc_codes"])
+            }
+            
+            history.append({"Priority List": prior_list})
+            logger.info(f"History: {history}")
+
+            decision_res = dct_code_decision_agent(
+                conversation_history=llm_history,
+                message=body.message,
+                prior_list=prior_list
+            )
+            logger.info(f"Decision Result Casual Agent: {decision_res}")
+            if decision_res["status"] != "success":
+                assistant_reply = {"response": "Alright, I’m not getting a clear direction yet. What exact symptom or code are you seeing?"}    
+                sources = []
+                db_used = "none"
+
+            else:
+                decision_data = decision_res["data"]
+                query = decision_data.get("search_query", "") or body.message
+                dtc_code = decision_data.get("filters", {}).get("dtc_code", "")
+                logger.info(f"Connecting to Milvus")
+                logger.info(f"Query: {query}")
+                logger.info(f"DTC Code: {dtc_code}")
+                
+                connect_milvus()
+                collection = Collection("dtc_embeddings")
+
+                retrieved_steps = retrieve_from_milvus(
+                    collection=collection,
+                    query=query,
+                    dtc_code=dtc_code,
+                    top_k=5
+                )
+                logger.info(f"Reterived Context: {retrieved_steps}")
+
+                reply_res = reply_agent(
+                    conversation_history=llm_history,
+                    message=body.message,
+                    retrieved_steps=retrieved_steps
+                )
+
+                if reply_res["status"] == "success":
+                    assistant_reply = reply_res["data"]
+                else:
+                    assistant_reply = {"response": "Hmm, something’s off. Let’s retry — can you describe the issue again?"}
+
+                sources = [
+                    {
+                        "dtc_code": r["dtc_code"],
+                        "step_number": r["step_number"],
+                        "score": r["score"]
+                    }
+                    for r in retrieved_steps
+                ]
+
+                db_used = "milvus"
+        
+
     
 
-    print(f"LLM History for reply agent: {llm_history}")
-    print(f"Decision agent results: {decision_result}")
-    logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    logger.info("🤖 DECISION AGENT OUTPUT")
-    logger.info("Route      : %s", decision_result.get("route"))
-    logger.info("Tool       : %s", decision_result.get("tool"))
-    logger.info("DB Used    : %s", decision_result.get("db_used"))
-    logger.info("Confidence : %s", decision_result.get("confidence"))
-    logger.info("Reason     : %s", decision_result.get("reason"))
-
-    route       = decision_result["route"]
-    raw_context = decision_result["raw_context"]
-    source_type = decision_result["source_type"]
-    db_used     = decision_result["db_used"]
-    sources     = decision_result["sources"]
-
-    if db_used == "supabase":
-        logger.info("🗄️ SUPABASE HIT — diagnostic flow used")
-
-    # ── AGENT 2: Casual — ONLY when route is genuinely casual ────────────
-    # Never invoke the casual agent during an active diagnostic session
-    # or when the decision agent already retrieved diagnostic data.
-    if route == "casual":
-        logger.info("💬 CASUAL AGENT TRIGGERED")
-        raw_context = run_casual_agent(llm_history)
-        source_type = "casual"
-        db_used     = "llm_only"
-
-    # ── AGENT 3: Reply formatter ──────────────────────────────────────────
-    assistant_reply = run_reply_agent(
-        raw_context=raw_context,
-        user_message=body.message,
-        conversation_history=llm_history,
-        source_type=source_type,
-    )
-
+    # ── Check active session ──────────────────────────────────────────────
+    
     # ── Save and return ───────────────────────────────────────────────────
     assistant_entry = {
         "message_id": str(uuid.uuid4()),
         "role":       "assistant",
-        "content":    assistant_reply,
+        "content":    assistant_reply.get("response", ""),
         "sources":    sources,
         "db_used":    db_used,
         "created_at": now_iso(),

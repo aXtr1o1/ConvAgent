@@ -2,7 +2,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from ingestion.collectors.pdf_parser           import parse_pdf
+from ingestion.collectors.pdf_parser           import parse_docs
 from ingestion.src.processors.merger          import merge_parsed_documents
 from ingestion.src.processors.chunker          import build_chunks
 from ingestion.src.storage.structured_writer   import write_to_structured_db

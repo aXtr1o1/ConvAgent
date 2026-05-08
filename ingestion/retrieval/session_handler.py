@@ -501,7 +501,7 @@ def advance_session(session_id: str, answer: str) -> dict:
             ptree = get_decision_tree(parent_row.get("dtc_code", ""))
             psteps = ptree.get("steps", []) if ptree else []
             if 0 <= resume_idx < len(psteps):
-                close_session(session_id)
+                5(session_id)
                 _update_session(
                     parent_sid,
                     resume_idx,

@@ -26,3 +26,8 @@ client = AzureOpenAI(
     api_version=azure_version,
     azure_endpoint=azure_endpoint
 )
+embed_client = AzureOpenAI(
+    api_key=azure_emb_key,
+    api_version=azure_emb_version,
+    azure_endpoint=azure_emb_endpoint
+)
