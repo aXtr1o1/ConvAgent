@@ -52,7 +52,7 @@ function ChatPage() {
       
       setLoading(false);
     }
-  }, [showErrorToast, activeConversationId]);
+  }, [showErrorToast]);
 
   useEffect(() => {
     if (!showChatUI) return;
