@@ -1015,8 +1015,8 @@ body::-webkit-scrollbar {
 
 /* Push the whole user bubble to the right */
 .chat-page-msg--user {
-  background: rgba(91, 122, 104, 0.28);
-  border: 1px solid rgba(91, 122, 104, 0.4);
+  background: #dce8e0;
+  border: 1px solid #6d8978;
   color: #1a231e;
   margin-left: auto;          /* right side */
 }
