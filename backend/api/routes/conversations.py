@@ -39,113 +39,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# ── Diagnostic routing helper ─────────────────────────────────────────────────
-DTC_PATTERN = re.compile(r'\b(P[0-9A-Fa-f]{4}(?:-[0-9A-Fa-f]{2})?)\b')
-
-
-async def handle_diagnostic_routing(message: str, conversation_id: str):
-    """
-    Routes message to the appropriate handler.
-    Cancel detection is now handled by LLM intent detector
-    inside session_handler.advance_session() — no hardcoded words here.
-    """
-
-    # Already in a session — LLM handles YES / NO / CANCEL / UNCLEAR
-    active = get_active_session_for_conversation(conversation_id)
-    
-    if active:
-        result = advance_session(active["session_id"], message)
-        
-        print("Appended decision context to conversation history in DB.")
-        return {"response": result["message"]}
-
-    # New DTC detected in message
-    match = DTC_PATTERN.search(message)
-    if match:
-        dtc_code = match.group(1).upper()
-        meta = get_dtc_metadata(dtc_code)
-        if meta:
-            result = start_session(conversation_id, dtc_code)
-            if "error" not in result:
-                return {"response": result["message"]}
-
-    return None
-
-
-# ── Tool functions passed to Decision Agent ───────────────────────────────────
-
-def _make_supabase_tool(conversation_id: str):
-    """
-    Returns a synchronous supabase tool function bound to this conversation.
-
-    handle_diagnostic_routing is async, but run_decision_agent is called from
-    a sync FastAPI endpoint (already inside a threadpool thread). We cannot use
-    asyncio.run() here because there is already a running event loop in that
-    thread context, which raises RuntimeError.
-
-    Solution: call the underlying sync functions directly instead of going
-    through the async wrapper. handle_diagnostic_routing does nothing async
-    itself — its body is entirely sync Supabase SDK calls.
-    """
-    def supabase_tool(message: str, intent: str = None, dtc_code: str = None, parent_bool: bool = False):
-        try:
-            # Replicate handle_diagnostic_routing inline (sync — no await needed)
-            active = get_active_session_for_conversation(conversation_id)
-            if parent_bool:
-                if active:
-                    close_session(active["session_id"])
-                print("Resuming parent session")
-                parent_info = _resume_parent_if_any(active)
-                if parent_info:
-                    return {"response": parent_info["parent_dtc"]},[]
-                else:
-                    return {"response": "Could not resume parent session."},[]
-                    
-            if intent=="cancel":
-                if active:
-                    close_session(active["session_id"])
-                    return {"response": "Diagnostic session cancelled."},[]
-                return {"response": "No active diagnostic session to cancel."},[]
-            if intent == "start_session" and dtc_code:
-                # Switching DTC should behave like a decision tree:
-                # try starting the new DTC first; if it fails, keep the previous session.
-                prev_session_id = active["session_id"] if active else None
-                result = start_session(conversation_id, dtc_code, parent_session_id=prev_session_id)
-                print(f"Result: {result}")
-
-                if not result:
-                    return {"response": "Could not start a new diagnostic session. Continuing previous session if available."}, []
-
-                # If knowledge base has no tree for the new DTC, do NOT close the previous session.
-                if result.get("error"):
-                    return {
-                        "response": (
-                            f"{result['error']}\n\n"
-                            "Continuing your previous diagnostic session. Reply YES/NO for the current step."
-                        )
-                    }, []
-
-                # New session started successfully → now close the previous session.
-                if prev_session_id:
-                    # Do NOT resolve it; pause it so we can resume later.
-                    pause_session(prev_session_id)
-
-                return {"response": result.get("message", "Started new diagnostic session.")}, []
-            if intent == "continue_session":
-                if not active:
-                    return {"response": "No active session to continue."}   
-                result = advance_session(active["session_id"], message)
-                
-                return {"response": result["message"]},[]
-            
-            return None
-        except Exception as e:
-            logger.error("supabase_tool error: %s", e, exc_info=True)
-            return None
-    return supabase_tool
-
-
-
 # ── 1. CREATE CONVERSATION ────────────────────────────────────────────────────
 @router.post("/conversations")
 def create_conversation(body: CreateConversationRequest):
@@ -297,10 +190,7 @@ def send_message(conversation_id: str, body: SendMessageRequest):
     }
     history.append(user_entry)
 
-    llm_history = [
-        {"role": m["role"], "content": m["content"]}
-        for m in history[-5:]
-    ]
+    llm_history = [{"role": m["role"], "content": m["content"]} for m in history[-5:] if "Priority List" not in m.keys()]
 
     for i in llm_history:
         print(f"I: {i}")
@@ -523,7 +413,7 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
                 message=user_message,
                 has_active_session=bool(active_session),
                 conversation_history=llm_history,
-                supabase_tool=_make_supabase_tool(conversation_id),
+                supabase_tool=None,
               
             )
 

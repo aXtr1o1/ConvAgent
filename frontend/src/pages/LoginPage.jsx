@@ -38,6 +38,8 @@ function LoginPage() {
       const data = await validateLogin(userName.trim(), password);
       // Success: { status: "success", user_id, username }
       if (data.status === true || data.status === 'success') {
+        console.log('[login] user_id:', data.user_id);
+        console.log('[login] username:', data.username);
         if (data.user_id) localStorage.setItem('user_id', data.user_id);
         if (data.username) localStorage.setItem('username', data.username);
         setTransitioningToLanding(true);

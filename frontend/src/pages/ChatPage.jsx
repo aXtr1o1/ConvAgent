@@ -20,14 +20,15 @@ function ChatPage() {
     () => (typeof window !== 'undefined' ? localStorage.getItem('active_conversation_id') : null)
   );
   const [loading, setLoading] = useState(false);
-  const [sendLoading, setSendLoading] = useState(false);
+  const [loadingConversationId, setLoadingConversationId] = useState(null);
+  const sendLoading = loadingConversationId === activeConversationId;
   const wasSendingRef = useRef(false);
   const { showError: showErrorToast } = useErrorToast();
   const isArchived = location.pathname === '/chat/archived';
   const isLibrary = location.pathname === '/chat/library';
   const showChatUI = !isArchived && !isLibrary;
   const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
-
+  const [pendingMessages, setPendingMessages] = useState({});
   const loadConversation = useCallback(async (conversationId) => {
     if (!conversationId) {
       setMessages([]);
@@ -43,18 +44,15 @@ function ChatPage() {
           new Date(b.updated_at || b.created_at || 0)
       );
       setMessages(msgs);
+      
     } catch (e) {
       showErrorToast(e.message || 'Failed to load conversation');
-      setMessages([]);
+      setPendingMessages((prev) => ({ ...prev, [conversationId]: [] }));
     } finally {
+      
       setLoading(false);
     }
-  }, [showErrorToast]);
-
-  useEffect(() => {
-    if (!showChatUI) return;
-    loadConversation(activeConversationId);
-  }, [showChatUI, activeConversationId, loadConversation]);
+  }, [showErrorToast, activeConversationId]);
 
   useEffect(() => {
     if (!showChatUI) return;
@@ -77,7 +75,13 @@ function ChatPage() {
       window.removeEventListener('active-conversation-deleted', onDeleted);
     };
   }, [showChatUI, activeConversationId, loadConversation]);
-
+  useEffect(() => {
+    if (!showChatUI) return;
+  
+    if (activeConversationId) {
+      loadConversation(activeConversationId);
+    }
+  }, [activeConversationId, showChatUI, loadConversation]);
   const handleSend = async (e) => {
     e.preventDefault();
     const trimmed = message.trim();
@@ -113,8 +117,20 @@ function ChatPage() {
       content: trimmed,
       created_at: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, optimisticUserMessage]);
-    setSendLoading(true);
+    setPendingMessages((prev) => ({
+       ...prev ,
+        [conversationId]: [
+          ...(prev[conversationId] || []), 
+        optimisticUserMessage, 
+        {
+      message_id: `thinking-${Date.now()}`,
+      role: 'assistant',
+      content: '',
+      thinking: true,
+    },
+  ],
+}));
+    setLoadingConversationId(conversationId);
     try {
       let data = null;
       try {
@@ -148,8 +164,12 @@ function ChatPage() {
           new Date(b.updated_at || b.created_at || 0)
       );
       // Ensure the "Thinking" placeholder disappears before we render the real assistant reply.
-      setSendLoading(false);
+      setLoadingConversationId(null);
       setMessages(msgs);
+      setPendingMessages((prev) => ({
+        ...prev,
+        [conversationId]: [],
+      }));
       // Notify sidebar so it can refresh ordering based on updated_at
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
@@ -158,8 +178,11 @@ function ChatPage() {
       }
     } catch (err) {
       showErrorToast(err.message || 'Failed to send message');
-      setSendLoading(false);
-      setMessages((prev) => prev.filter((m) => m.message_id !== optimisticUserMessage.message_id));
+      setLoadingConversationId(null);
+      setPendingMessages((prev) => ({
+        ...prev,
+        [conversationId]: [],
+      }));
     }
   };
 
@@ -174,7 +197,7 @@ function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, sendLoading]);
-
+  const mergedMessages = [ ...messages, ...(pendingMessages[activeConversationId] || [])];
   return (
     <div
       className="main-page-content chat-page-content"
@@ -189,43 +212,47 @@ function ChatPage() {
       <div className="chat-page-overlay" aria-hidden="true" />
 
       <main className="chat-page-main">
-        {messages.length > 0 || sendLoading ? (
+        {mergedMessages.length > 0 || sendLoading ? (
           <div className="chat-page-messages" role="log" aria-live="polite">
-            {messages.map((m) => (
+            {mergedMessages
+  .filter((m) => m.thinking || (m.content && m.content.trim() !== ''))
+  .map((m) => (
               <article
                 key={m.message_id || `${m.role}-${m.content?.slice(0, 30)}`}
-                className={`chat-page-msg chat-page-msg--${m.role}`}
+                className={ 
+                  m.thinking? 'chat-page-msg chat-page-msg--thinking'
+                  : `chat-page-msg chat-page-msg--${m.role}`}
                 aria-label={m.role === 'user' ? 'Your message' : 'Assistant reply'}
               >
+                {!m.thinking && (
                 <span className="chat-page-msg-label">
                   {m.role === 'user' ? 'You' : 'Assistant'}
                 </span>
-                <div className="chat-page-msg-content">
-                  {m.role === 'assistant' ? (
-                    <ReactMarkdown>{m.content || ''}</ReactMarkdown>
-                  ) : (
-                    <p className="chat-page-msg-plain">{m.content || ''}</p>
-                  )}
+                )}
+                <div className={
+                  `chat-page-msg-content ${
+                    m.thinking ? 'chat-page-msg-content--thinking':``
+                  }`
+                }
+                >
+                  {m.thinking ?  (
+                  <div className="chat-page-thinking">
+                    <span className="chat-page-thinking-text">Thinking</span>
+                    <span className="chat-page-thinking-dots" aria-hidden="true">
+                      <span className="chat-page-thinking-dot" />
+                      <span className="chat-page-thinking-dot" />
+                      <span className="chat-page-thinking-dot" />
+                    </span>
+                  </div>
+                ) : m.role === 'assistant' ? (
+                  <ReactMarkdown>{m.content || ''}</ReactMarkdown>
+                ) : (
+                  <p className="chat-page-msg-plain">{m.content || ''}</p>
+                )}
                 </div>
               </article>
             ))}
-            {sendLoading && (
-              <article
-                className="chat-page-msg chat-page-msg--assistant chat-page-msg--thinking"
-                aria-live="polite"
-                aria-label="Assistant thinking"
-              >
-                <span className="chat-page-msg-label">Assistant</span>
-                <div className="chat-page-msg-content chat-page-thinking">
-                  <span className="chat-page-thinking-text">Thinking</span>
-                  <span className="chat-page-thinking-dots" aria-hidden="true">
-                    <span className="chat-page-thinking-dot" />
-                    <span className="chat-page-thinking-dot" />
-                    <span className="chat-page-thinking-dot" />
-                  </span>
-                </div>
-              </article>
-            )}
+            
             <div ref={messagesEndRef} aria-hidden="true" />
           </div>
         ) : loading ? (

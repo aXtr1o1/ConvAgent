@@ -1020,6 +1020,22 @@ body::-webkit-scrollbar {
   color: #1a231e;
   margin-left: auto;          /* right side */
 }
+
+.chat-page-msg--thinking {
+  display: flex;
+  justify-content: flex-start;
+  margin: 12px 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+.chat-page-msg-content--thinking {
+  background: rgba(255,255,255,0.08);
+  padding: 12px 18px;
+  border-radius: 16px;
+  width: fit-content;
+  max-width: 120px;
+}
 /* .chat-page-msg-label {
   display: block;
   font-size: 0.8rem;
@@ -1162,6 +1178,11 @@ body::-webkit-scrollbar {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
+}
+.chat-page-msg-content--thinking {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
 }
 
 .chat-page-thinking-dot {

@@ -20,8 +20,11 @@ function ChatSidebar({ visible, exiting }) {
   const refreshSeqRef = useRef(0);
 
   const refreshConversations = useCallback(async () => {
+    console.log('[ChatSidebar] refreshing conversations for user_id:', userId);
+    console.log('[ChatSidebar] user_id:', localStorage.getItem('user_id'));
     if (!userId) {
       setConversations([]);
+
       return;
     }
     const seq = ++refreshSeqRef.current;

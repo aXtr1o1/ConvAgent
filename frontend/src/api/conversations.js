@@ -1,61 +1,83 @@
+import { supabase } from '../lib/supabase';
 const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
 const API_V1 = `${API_BASE}/api/v1`;
 
 export async function listConversations(userId) {
-  if (!userId) return { conversations: [] };
-  const res = await fetch(`${API_V1}/conversations/user/${encodeURIComponent(userId)}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  let data = null;
-  try {
-    data = await res.json();
-  } catch {
-    data = null;
-  }
+  if (!userId || userId==='undefined') throw new Error('Missing user_id');
+  const {data, error} = await supabase
+  .from('conversations')
+  .select('conversationid, conversationtitle, updatedat, createdat')
+  .eq('userid', userId)
+  .order('updatedat', {ascending: false});
 
-  // If user has no conversations or backend returns not-found, just show empty list.
-  if (res.status === 404) return { conversations: [] };
-  if (!res.ok) throw new Error((data && data.detail) || 'Failed to load conversations');
 
-  if (!data || !Array.isArray(data.conversations)) return { conversations: [] };
-  return data;
+  if (error) throw error;
+
+  return {
+    conversations: (data || []).map((c) => ({
+      conversation_id: c.conversationid,
+      title: c.conversationtitle,
+      updated_at: c.updatedat,
+      created_at: c.createdat,
+    })),
+  };
 }
 
 export async function createConversation(userId) {
   if (!userId) throw new Error('Missing user_id');
-  const res = await fetch(`${API_V1}/conversations`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_id: userId }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || 'Failed to create conversation');
-  return data;
+  const {data, error} = await supabase
+  .from('conversations')
+  .insert({
+    userid: userId,
+    conversationtitle: 'New Conversation',
+    conversationdata: [],
+  })
+  .select()
+  .single();
+  if (error) throw error;
+  return {
+    conversation_id: data.conversationid,
+    title: data.conversationtitle,
+    updated_at: data.updatedat,
+    created_at: data.createdat,
+  };
 }
 
 export async function getConversation(conversationId) {
   if (!conversationId) return null;
-  const res = await fetch(`${API_V1}/conversations/${encodeURIComponent(conversationId)}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  if (res.status === 404) return null;
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || 'Failed to load conversation');
-  return data;
+  const{data , error} = await supabase
+  .from("conversations")
+  .select("*")
+  .eq("conversationid", conversationId)
+  .single();
+  if (error) throw error;
+
+  return {
+    conversation_id: data.conversationid,
+    title: data.conversationtitle,
+    messages: data.conversationdata || [],
+  };
+
 }
 
+
 export async function deleteConversation(conversationId) {
-  if (!conversationId) return;
-  const res = await fetch(`${API_V1}/conversations/${encodeURIComponent(conversationId)}`, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.detail || 'Failed to delete conversation');
-  }
+
+  if (!conversationId){
+    throw new Error("Missing Conversation ID");
+  } 
+
+  const {error} = await supabase
+  .from("conversations")
+  .delete()
+  .eq("conversationid", conversationId);
+
+  if (error) throw error;
+
+  return {
+    success: true,
+  };
+
 }
 
 export async function sendMessage(conversationId, message) {
