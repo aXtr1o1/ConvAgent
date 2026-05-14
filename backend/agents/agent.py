@@ -83,7 +83,6 @@ def dct_code_extraction_agent(conversation_history: list[dict], message: str, pr
                 
             ],
             temperature = 0.7,
-            max_tokens = 100,
             )
         logger.info(f"Response: {response.choices[0].message.content}")
         val = json.loads(response.choices[0].message.content.replace("json (","{").replace(")","}"))
@@ -143,7 +142,6 @@ def dct_code_decision_agent(conversation_history: list[dict], message: str, prio
                     {"role":"system", "content": prompt},
                 ],
                 temperature = 0.2,
-                max_tokens = 300,
             )
             logger.info(f"Response: {response.choices[0].message.content}")
             val = json.loads(response.choices[0].message.content.replace("json(","{").replace(")","}"))
